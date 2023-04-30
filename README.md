@@ -16,7 +16,7 @@ pip install -e .
 
 * A minimal example usage is given in `example.py` and below:
 ```python
-import ibc_api as ibc
+import ibc_api.utils as ibc
 
 # Returns a link that takes you to EBRAINS login page and stores an access token locally
 ibc.authenticate()
