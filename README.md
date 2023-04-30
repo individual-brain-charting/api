@@ -5,6 +5,7 @@ API to fetch publicly available IBC data
 ```bash
 git clone git@github.com:individual-brain-charting/api.git
 cd api
+pip install -e .
 ```
 
 # Usage

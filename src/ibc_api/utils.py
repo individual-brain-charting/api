@@ -31,8 +31,7 @@ SUBJECTS = [
 
 
 def authenticate():
-    """This function authenticates you to Ebrains. It would return a link that would prompt you to login or create an Ebrains account.
-    """
+    """This function authenticates you to Ebrains. It would return a link that would prompt you to login or create an Ebrains account."""
     siibra.fetch_ebrains_token()
 
 
@@ -95,7 +94,9 @@ def get_info(data_type="statistic_map", save_to=None):
     if save_to is None:
         save_to = "ibc_data"
     if not os.path.exists(save_to):
-        os.makedirs(save_to)
+        return ValueError(f"Directory {save_to} does not exist.")
+    save_to = os.path.join(save_to, "ibc_data")
+    os.makedirs(save_to)
     save_as = os.path.join(save_to, f"available_{data_type}.csv")
     db.to_csv(save_as)
     return db
@@ -215,7 +216,7 @@ def _update_local_db(db_file, file_names, file_times):
     -------
     pandas.DataFrame
         updated local database
-    """    
+    """
 
     if type(file_names) is str:
         file_names = [file_names]
@@ -260,7 +261,7 @@ def _download_file(src_file, dst_file, connector):
     -------
     str, datetime
         path to the downloaded file and time at which it was downloaded
-    """    
+    """
     if not os.path.exists(dst_file):
         # load the file from ebrains
         src_data = connector.get(src_file)
@@ -281,7 +282,7 @@ def _download_file(src_file, dst_file, connector):
         return [], []
 
 
-def download_data(db, download_dir="ibc_data", organise_by="session"):
+def download_data(db, save_to=None, organise_by="session"):
     """Download the files in a (filtered) dataframe.
 
     Parameters
@@ -289,8 +290,8 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
     db : pandas.DataFrame
         dataframe with information about files in the dataset, ideally a subset
         of the full dataset
-    download_dir : str, optional
-        where to save the data, by default "ibc_data"
+    save_to : str, optional
+        where to save the data, by default None, in which case the data is  saved in a directory called "ibc_data" in the current working directory
     organise_by : str, optional
         whether to organise files under separate task or session folders,
         by default "session", could be one of ["session", "task"]
@@ -306,15 +307,24 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
     connector = _connect_ebrains(data_type)
     # get the file names as they are on ebrains
     src_file_names = get_file_paths(db)
+
+    # set the save directory
+    if save_to is None:
+        save_to = "ibc_data"
+    if not os.path.exists(save_to):
+        return ValueError(f"Directory {save_to} does not exist.")
+    save_to = os.path.join(save_to, "ibc_data")
+    os.makedirs(save_to)
+
     # track downloaded file names and times
-    local_db_file = os.path.join(download_dir, f"downloaded_{data_type}.csv")
+    local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
     file_count = 0
     # download the files
     for src_file in tqdm(src_file_names):
         # construct the directory structure as required by the user
         # either by session or by task
         dst_file_head, dst_file_base = _construct_dir(
-            download_dir, src_file, organise_by
+            save_to, src_file, organise_by
         )
         # file path to save the data
         dst_file = os.path.join(dst_file_head, dst_file_base)
@@ -325,6 +335,8 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
         # keep cache < 2GiB, delete oldest files first
         CACHE.run_maintenance()
 
-    print(f"Downloaded requested files from IBC {data_type} dataset")
+    print(
+        f"Downloaded requested files from IBC {data_type} dataset. See {local_db_file} for details."
+    )
 
     return local_db
