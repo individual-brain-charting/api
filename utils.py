@@ -49,7 +49,7 @@ def _connect_ebrains(data_type="statistic_map"):
     return EbrainsHdgConnector(dataset_id)
 
 
-def get_info(data_type="statistic_map", save_as=None):
+def get_info(data_type="statistic_map", save_to=None):
     """Fetch a csv file describing each file in a given IBC dataset on Ebrains.
 
     Parameters
@@ -78,10 +78,11 @@ def get_info(data_type="statistic_map", save_as=None):
     else:
         return ValueError(f"Unknown data type: {data_type}")
     # save the database file
-    if save_as is None:
-        if not os.path.exists("ibc_data"):
-            os.makedirs("ibc_data")
-        save_as = os.path.join("ibc_data", f"available_{data_type}.csv")
+    if save_to is None:
+        save_to = "ibc_data"
+    if not os.path.exists(save_to):
+        os.makedirs(save_to)
+    save_as = os.path.join(save_to, f"available_{data_type}.csv")
     db.to_csv(save_as)
     return db
 
