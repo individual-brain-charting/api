@@ -19,7 +19,8 @@ import utils as ibc
 # Returns a link that takes you to EBRAINS login page and stores an access token locally
 ibc.authenticate()
 
-# Fetch info on all available files, load as a pandas dataframe and save as ibc_data/available_statistic_map.csv 
+# Fetch info on all available files
+# Load as a pandas dataframe and save as ibc_data/available_statistic_map.csv 
 db = ibc.get_info(data_type="statistic_map")
 
 # Keep statistic maps for sub-08, for task-Discount
