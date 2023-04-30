@@ -31,7 +31,9 @@ SUBJECTS = [
 
 
 def authenticate():
-    """This function authenticates you to Ebrains. It would return a link that would prompt you to login or create an Ebrains account."""
+    """This function authenticates you to Ebrains. It would return a link that
+    would prompt you to login or create an Ebrains account. Read more about
+    registering for Ebrains here: https://ebrains.eu/register"""
     siibra.fetch_ebrains_token()
 
 
@@ -57,6 +59,31 @@ def _connect_ebrains(data_type="statistic_map"):
         return ValueError(f"Unknown data type: {data_type}")
 
     return EbrainsHdgConnector(dataset_id)
+
+
+def _create_root_dir(dir_path=None):
+    """Create a root directory ibc_data to store all downloaded data.
+
+    Parameters
+    ----------
+    dir_path : str or None, optional
+        path upto the root directory, by default None, if None creates
+        ibc_data in the current directory
+
+    Returns
+    -------
+    str
+        path to the root directory
+    """
+
+    if dir_path is None:
+        dir_path = "ibc_data"
+    if not os.path.exists(dir_path):
+        return ValueError(f"Directory {dir_path} does not exist.")
+    dir_path = os.path.join(dir_path, "ibc_data")
+    os.mkdir(dir_path)
+
+    return dir_path
 
 
 def get_info(data_type="statistic_map", save_to=None):
@@ -91,12 +118,7 @@ def get_info(data_type="statistic_map", save_to=None):
     else:
         return ValueError(f"Unknown data type: {data_type}")
     # save the database file
-    if save_to is None:
-        save_to = "ibc_data"
-    if not os.path.exists(save_to):
-        return ValueError(f"Directory {save_to} does not exist.")
-    save_to = os.path.join(save_to, "ibc_data")
-    os.makedirs(save_to)
+    save_to = _create_root_dir(save_to)
     save_as = os.path.join(save_to, f"available_{data_type}.csv")
     db.to_csv(save_as)
     return db
@@ -291,7 +313,8 @@ def download_data(db, save_to=None, organise_by="session"):
         dataframe with information about files in the dataset, ideally a subset
         of the full dataset
     save_to : str, optional
-        where to save the data, by default None, in which case the data is  saved in a directory called "ibc_data" in the current working directory
+        where to save the data, by default None, in which case the data is
+        saved in a directory called "ibc_data" in the current working directory
     organise_by : str, optional
         whether to organise files under separate task or session folders,
         by default "session", could be one of ["session", "task"]
@@ -309,16 +332,10 @@ def download_data(db, save_to=None, organise_by="session"):
     src_file_names = get_file_paths(db)
 
     # set the save directory
-    if save_to is None:
-        save_to = "ibc_data"
-    if not os.path.exists(save_to):
-        return ValueError(f"Directory {save_to} does not exist.")
-    save_to = os.path.join(save_to, "ibc_data")
-    os.makedirs(save_to)
+    save_to = _create_root_dir(save_to)
 
     # track downloaded file names and times
     local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
-    file_count = 0
     # download the files
     for src_file in tqdm(src_file_names):
         # construct the directory structure as required by the user
@@ -336,7 +353,8 @@ def download_data(db, save_to=None, organise_by="session"):
         CACHE.run_maintenance()
 
     print(
-        f"Downloaded requested files from IBC {data_type} dataset. See {local_db_file} for details."
+        f"Downloaded requested files from IBC {data_type} dataset. See "
+        f"{local_db_file} for details."
     )
 
     return local_db
