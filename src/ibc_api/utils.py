@@ -78,10 +78,10 @@ def _create_root_dir(dir_path=None):
 
     if dir_path is None:
         dir_path = "ibc_data"
+    else:
+        dir_path = os.path.join(dir_path, "ibc_data")
     if not os.path.exists(dir_path):
-        return ValueError(f"Directory {dir_path} does not exist.")
-    dir_path = os.path.join(dir_path, "ibc_data")
-    os.mkdir(dir_path)
+        os.mkdir(dir_path)
 
     return dir_path
 
