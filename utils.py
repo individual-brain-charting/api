@@ -6,6 +6,8 @@ import os
 from tqdm import tqdm
 import nibabel
 from siibra.retrieval.cache import CACHE
+import pandas as pd
+from io import BytesIO
 
 # keep cache < 2GiB, delete oldest files first
 CACHE.clear()
@@ -72,7 +74,7 @@ def get_info(data_type="statistic_map", save_to=None):
         # file with all information about the dataset
         db_file = STAT_MAPS_DB
         # get the file
-        db = connector.get(db_file)
+        db = connector.get(db_file, decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","))
         db.drop(columns=["Unnamed: 0"], inplace=True)
     # TODO add other data types: raw, preprocessed, etc.
     else:
