@@ -5,6 +5,7 @@ API to fetch publicly available IBC data
 ```bash
 git clone git@github.com:individual-brain-charting/api.git
 cd api
+pip install --upgrade pip
 pip install -e .
 ```
 
@@ -15,7 +16,7 @@ pip install -e .
 
 * A minimal example usage is given in `example.py` and below:
 ```python
-import utils as ibc
+import ibc_api as ibc
 
 # Returns a link that takes you to EBRAINS login page and stores an access token locally
 ibc.authenticate()
