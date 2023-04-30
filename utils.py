@@ -1,4 +1,5 @@
-"""Functions to fetch IBC data from Ebrains via Human Data Gateway using siibra. #TODO add other data sources: neurovault, openneuro"""
+"""Functions to fetch IBC data from Ebrains via Human Data Gateway using siibra. 
+#TODO add other data sources: neurovault, openneuro"""
 
 import siibra
 from siibra.retrieval.repositories import EbrainsHdgConnector
@@ -8,22 +9,30 @@ import nibabel
 from siibra.retrieval.cache import CACHE
 import pandas as pd
 from io import BytesIO
+from datetime import datetime
 
-# keep cache < 2GiB, delete oldest files first
+# clear cache
 CACHE.clear()
 
 # dataset ids on ebrains
-DATASET_ID = {"statistic_map": "07ab1665-73b0-40c5-800e-557bc319109d", "preproc": "3ca4f5a1-647b-4829-8107-588a699763c1", "raw": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24"}
+DATASET_ID = {
+    "statistic_map": "07ab1665-73b0-40c5-800e-557bc319109d",
+    "preproc": "3ca4f5a1-647b-4829-8107-588a699763c1",
+    "raw": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24",
+}
 
 # path to csv file with information about all statistic maps on Ebrains
 STAT_MAPS_DB = "resulting_smooth_maps/ibc_neurovault.csv"
 
 # all subjects in IBC dataset
-SUBJECTS = ['sub-%02d' % i for i in
-            [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]]
+SUBJECTS = [
+    "sub-%02d" % i for i in [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
+]
+
 
 def authenticate():
-    """Authenticate with ebrains."""
+    """This function authenticates you to Ebrains. It would return a link that would prompt you to login or create an Ebrains account.
+    """
     siibra.fetch_ebrains_token()
 
 
@@ -74,7 +83,10 @@ def get_info(data_type="statistic_map", save_to=None):
         # file with all information about the dataset
         db_file = STAT_MAPS_DB
         # get the file
-        db = connector.get(db_file, decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","))
+        db = connector.get(
+            db_file,
+            decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","),
+        )
         db.drop(columns=["Unnamed: 0"], inplace=True)
     # TODO add other data types: raw, preprocessed, etc.
     else:
@@ -179,12 +191,94 @@ def _construct_dir(download_dir, file, organise_by="session"):
     elif organise_by == "task":
         root_dir = file.split(os.sep)[0]
         sub_name = file_base.split("_")[0]
-        task_name = file_base.split("_")[3]
+        task_name = file_base.split("_")[2]
         file_head = os.path.join(download_dir, root_dir, sub_name, task_name)
     if not os.path.exists(file_head):
         os.makedirs(file_head)
 
     return file_head, file_base
+
+
+def _update_local_db(db_file, file_names, file_times):
+    """Update the local database of downloaded files.
+
+    Parameters
+    ----------
+    db_file : str
+        path to the local database file
+    file_names : str or list
+        path to the downloaded file(s)
+    file_times : str or list
+        time at which the file(s) were downloaded
+
+    Returns
+    -------
+    pandas.DataFrame
+        updated local database
+    """    
+
+    if type(file_names) is str:
+        file_names = [file_names]
+        file_times = [file_times]
+
+    if not os.path.exists(db_file):
+        # create a new database
+        db = pd.DataFrame(
+            {"local_path": file_names, "downloaded_on": file_times}
+        )
+    else:
+        # load the database
+        db = pd.read_csv(db_file, index_col=False)
+        # update the database
+        db = pd.concat(
+            [
+                db,
+                pd.DataFrame(
+                    {"local_path": file_names, "downloaded_on": file_times}
+                ),
+            ]
+        )
+    # save the database
+    db.to_csv(db_file, index=False)
+
+    return db
+
+
+def _download_file(src_file, dst_file, connector):
+    """Download a file from ebrains.
+
+    Parameters
+    ----------
+    src_file : str
+        path to the file on ebrains
+    dst_file : str
+        path to save the file to locally
+    connector : EbrainsHdgConnector
+        connector to the IBC dataset on ebrains
+
+    Returns
+    -------
+    str, datetime
+        path to the downloaded file and time at which it was downloaded
+    """    
+    if not os.path.exists(dst_file):
+        # load the file from ebrains
+        src_data = connector.get(src_file)
+        if type(src_data) is nibabel.nifti1.Nifti1Image:
+            src_data.to_filename(dst_file)
+        # TODO add other data like json, etc.
+        else:
+            return ValueError(
+                f"Don't know how to save file {src_file}"
+                f" of type {type(src_data)}"
+            )
+
+        return dst_file, datetime.now()
+
+    else:
+        print(f"File {dst_file} already exists, skipping download.")
+
+        return [], []
 
 
 def download_data(db, download_dir="ibc_data", organise_by="session"):
@@ -204,7 +298,7 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
     Returns
     -------
     pandas.DataFrame
-        dataframe with information about files downloaded from the dataset
+        dataframe with downloaded file names and times from the dataset
     """
     # get data type from db
     data_type = db["image_type"].unique()[0]
@@ -212,8 +306,9 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
     connector = _connect_ebrains(data_type)
     # get the file names as they are on ebrains
     src_file_names = get_file_paths(db)
-    # save file names as saved locally
-    dst_file_names = []
+    # track downloaded file names and times
+    local_db_file = os.path.join(download_dir, f"downloaded_{data_type}.csv")
+    file_count = 0
     # download the files
     for src_file in tqdm(src_file_names):
         # construct the directory structure as required by the user
@@ -223,22 +318,13 @@ def download_data(db, download_dir="ibc_data", organise_by="session"):
         )
         # file path to save the data
         dst_file = os.path.join(dst_file_head, dst_file_base)
-        if not os.path.exists(dst_file):
-            # load the file from ebrains
-            src_data = connector.get(src_file)
-            if type(src_data) is nibabel.nifti1.Nifti1Image:
-                src_data.to_filename(dst_file)
-            # TODO add other data like json, etc.
-            else:
-                return ValueError(
-                    f"Don't know how to save data of type {type(src_data)}"
-                )
-        else:
-            print(f"File {dst_file} already exists, skipping download.")
-        dst_file_names.append(dst_file)
-    db["local_path"] = dst_file_names
-    db.to_csv(os.path.join(download_dir, f"downloaded_{data_type}.csv"))
 
-    print(f"Downloaded following {data_type}s from IBC data:\n{db}")
+        file_name, file_time = _download_file(src_file, dst_file, connector)
+        local_db = _update_local_db(local_db_file, file_name, file_time)
 
-    return db
+        # keep cache < 2GiB, delete oldest files first
+        CACHE.run_maintenance()
+
+    print(f"Downloaded requested files from IBC {data_type} dataset")
+
+    return local_db
