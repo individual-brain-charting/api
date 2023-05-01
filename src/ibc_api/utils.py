@@ -293,9 +293,7 @@ def _download_file(src_file, dst_file, connector):
                 f"Don't know how to save file {src_file}"
                 f" of type {type(src_data)}"
             )
-
         return dst_file, datetime.now()
-
     else:
         print(f"File {dst_file} already exists, skipping download.")
 
@@ -328,10 +326,8 @@ def download_data(db, save_to=None, organise_by="session"):
     connector = _connect_ebrains(data_type)
     # get the file names as they are on ebrains
     src_file_names = get_file_paths(db)
-
     # set the save directory
     save_to = _create_root_dir(save_to)
-
     # track downloaded file names and times
     local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
     # download the files
@@ -343,13 +339,10 @@ def download_data(db, save_to=None, organise_by="session"):
         )
         # file path to save the data
         dst_file = os.path.join(dst_file_head, dst_file_base)
-
         file_name, file_time = _download_file(src_file, dst_file, connector)
         local_db = _update_local_db(local_db_file, file_name, file_time)
-
         # keep cache < 2GiB, delete oldest files first
         CACHE.run_maintenance()
-
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
         f"{local_db_file} for details."
