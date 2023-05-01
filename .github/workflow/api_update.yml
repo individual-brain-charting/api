@@ -2,8 +2,7 @@ name: Update notifier
 on:
   push:
     branches: [master]
-    paths: ['.github/workflow/**', 'src/ibc_api/**']
-
+    
 jobs:
   dispatch:
     name: Notify docs
