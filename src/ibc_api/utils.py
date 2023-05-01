@@ -17,7 +17,7 @@ CACHE.clear()
 # dataset ids on ebrains
 DATASET_ID = {
     "statistic_map": "07ab1665-73b0-40c5-800e-557bc319109d",
-    "preproc": "3ca4f5a1-647b-4829-8107-588a699763c1",
+    "preprocessed": "3ca4f5a1-647b-4829-8107-588a699763c1",
     "raw": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24",
 }
 
@@ -43,19 +43,17 @@ def _connect_ebrains(data_type="statistic_map"):
     Parameters
     ----------
     data_type : str, optional
-        dataset to fetch, by default "statistic_map", TODO one of
-        ["statistic_map", "raw", "preprocessed", "surface_map"]
+        dataset to fetch, by default "statistic_map", can be one of 
+        ["statistic_map", "raw", "preprocessed"]
 
     Returns
     -------
     EbrainsHdgConnector
         connector to the dataset
     """
-    if data_type == "statistic_map":
-        # dataset id on ebrains
-        dataset_id = "07ab1665-73b0-40c5-800e-557bc319109d"
-    # TODO add other data types: raw, preprocessed, etc.
-    else:
+    try:
+        dataset_id = DATASET_ID[data_type]
+    except KeyError:
         return ValueError(f"Unknown data type: {data_type}")
 
     return EbrainsHdgConnector(dataset_id)
