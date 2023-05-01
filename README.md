@@ -2,12 +2,9 @@
 API to fetch publicly available IBC data 
 
 # Install
-Clone this repo, switch to the cloned repo and install the package with pip (needs latest pip version)
+Install this package as follows:
 ```bash
-git clone git@github.com:individual-brain-charting/api.git
-cd api
-pip install --upgrade pip
-pip install -e .
+pip install git+https://github.com/individual-brain-charting/api.git#egg=ibc_api
 ```
 
 # Usage
@@ -34,4 +31,9 @@ filtered_db = ibc.filter_data(db, subject_list=["sub-08"], task_list=["Discount"
 # Also create ibc_data/downloaded_statistic_map.csv 
 # This contains downloaded file paths and time of download
 downloaded_db = ibc.download_data(filtered_db, organise_by='task')
+```
+# Note
+Since this api is under active development, make sure to update it regularly
+```bash
+pip install -U git+https://github.com/individual-brain-charting/api.git#egg=ibc_api
 ```
