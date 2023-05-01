@@ -1,4 +1,4 @@
-"""Functions to fetch IBC data from Ebrains via Human Data Gateway using siibra. 
+"""API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
 #TODO add other data sources: neurovault, openneuro"""
 
 import siibra
@@ -21,7 +21,7 @@ DATASET_ID = {
     "raw": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24",
 }
 
-# path to csv file with information about all statistic maps on Ebrains
+# path to csv file with information about all statistic maps on EBRAINS
 STAT_MAPS_DB = "resulting_smooth_maps/ibc_neurovault.csv"
 
 # all subjects in IBC dataset
@@ -31,14 +31,14 @@ SUBJECTS = [
 
 
 def authenticate():
-    """This function authenticates you to Ebrains. It would return a link that
-    would prompt you to login or create an Ebrains account. Read more about
-    registering for Ebrains here: https://ebrains.eu/register"""
+    """This function authenticates you to EBRAINS. It would return a link that
+    would prompt you to login or create an EBRAINS account. Read more about
+    registering for EBRAINS here: https://ebrains.eu/register"""
     siibra.fetch_ebrains_token()
 
 
 def _connect_ebrains(data_type="statistic_map"):
-    """Connect to given IBC dataset on Ebrains via Human Data Gateway.
+    """Connect to given IBC dataset on EBRAINS via Human Data Gateway.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ def _create_root_dir(dir_path=None):
 
 
 def get_info(data_type="statistic_map", save_to=None):
-    """Fetch a csv file describing each file in a given IBC dataset on Ebrains.
+    """Fetch a csv file describing each file in a given IBC dataset on EBRAINS.
 
     Parameters
     ----------
