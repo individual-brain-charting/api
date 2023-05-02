@@ -2,7 +2,7 @@ name: Update notifier
 on:
   push:
     branches: [main]
-    paths: ['.github/workflows/**', 'src/ibc_api/**']
+    paths: ['.github/workflows/**', 'src/ibc_api/**', 'examples/get_data.ipynb']
 
 jobs:
   dispatch:
