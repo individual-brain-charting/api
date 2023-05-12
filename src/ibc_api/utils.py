@@ -259,6 +259,7 @@ def _update_local_db(db_file, file_names, file_times):
                 ),
             ]
         )
+    db.reset_index(drop=True, inplace=True)
     # save the database
     db.to_csv(db_file, index=False)
 
