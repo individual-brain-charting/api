@@ -264,22 +264,18 @@ def _download_file(src_file, dst_file, connector):
         path to the downloaded file and time at which it was downloaded
     """
     if not os.path.exists(dst_file):
-        print(src_file)
         # load the file from ebrains
         src_data = connector.get(src_file)
-        # print(type(src_data))
-        if type(src_data) in [
-            nibabel.nifti1.Nifti1Image,
-            nibabel.gifti.gifti.GiftiImage,
-        ]:
+        if type(src_data) == nibabel.nifti1.Nifti1Image:
+            nibabel.save(src_data, dst_file)
+        elif type(src_data) == nibabel.gifti.gifti.GiftiImage:
             nibabel.save(src_data, dst_file, mode="compat")
-            return dst_file
         else:
-            print("not a nifti file")
             return ValueError(
                 f"Don't know how to save file {src_file}"
                 f" of type {type(src_data)}"
             )
+        return dst_file
     else:
         print(f"File {dst_file} already exists, skipping download.")
 
