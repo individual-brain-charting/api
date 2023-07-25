@@ -1,5 +1,5 @@
 """API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
-#TODO add other data sources: neurovault, openneuro"""
+"""
 
 import siibra
 from siibra.retrieval.repositories import EbrainsHdgConnector
@@ -10,24 +10,16 @@ from siibra.retrieval.cache import CACHE
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+from . import metadata as md
 
 # clear cache
-CACHE.clear()
+CACHE.run_maintenance()
 
 # dataset ids on ebrains
-DATASET_ID = {
-    "statistic_map": "07ab1665-73b0-40c5-800e-557bc319109d",
-    "preprocessed": "3ca4f5a1-647b-4829-8107-588a699763c1",
-    "raw": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24",
-}
-
-# path to csv file with information about all statistic maps on EBRAINS
-STAT_MAPS_DB = "resulting_smooth_maps/ibc_neurovault.csv"
+METADATA = md.fetch_metadata()
 
 # all subjects in IBC dataset
-SUBJECTS = [
-    "sub-%02d" % i for i in [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
-]
+SUBJECTS = md.ibc_subjects()
 
 
 def authenticate():
@@ -37,24 +29,23 @@ def authenticate():
     siibra.fetch_ebrains_token()
 
 
-def _connect_ebrains(data_type="statistic_map"):
+def _connect_ebrains(data_type="volume_maps", metadata=METADATA):
     """Connect to given IBC dataset on EBRAINS via Human Data Gateway.
 
     Parameters
     ----------
     data_type : str, optional
-        dataset to fetch, by default "statistic_map", can be one of 
-        ["statistic_map", "raw", "preprocessed"]
+        dataset to fetch, by default "statistic_map", can be one of
+        ["volume_maps", "surface_maps", "preprocessed", "raw]
 
     Returns
     -------
     EbrainsHdgConnector
         connector to the dataset
     """
-    try:
-        dataset_id = DATASET_ID[data_type]
-    except KeyError:
-        return ValueError(f"Unknown data type: {data_type}")
+    # get the dataset id
+    dataset = md.select_dataset(data_type, metadata)
+    dataset_id = dataset["id"]
 
     return EbrainsHdgConnector(dataset_id)
 
@@ -84,14 +75,14 @@ def _create_root_dir(dir_path=None):
     return dir_path
 
 
-def get_info(data_type="statistic_map", save_to=None):
+def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     """Fetch a csv file describing each file in a given IBC dataset on EBRAINS.
 
     Parameters
     ----------
     data_type : str, optional
-        dataset to fetch, by default "statistic_map", TODO one of
-        ["statistic_map", "raw", "preprocessed"]
+        dataset to fetch, by default "volume_maps", one of
+        ["volume_maps","surface_maps", "raw", "preprocessed"]
     save_as : str or None, optional
         filename to save this csv as, by default None, if None saves as
         "ibc_data/available_{data_type}.csv"
@@ -103,18 +94,15 @@ def get_info(data_type="statistic_map", save_to=None):
     """
     # connect to ebrains dataset
     connector = _connect_ebrains(data_type)
-    if data_type == "statistic_map":
-        # file with all information about the dataset
-        db_file = STAT_MAPS_DB
-        # get the file
-        db = connector.get(
-            db_file,
-            decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","),
-        )
-        db.drop(columns=["Unnamed: 0"], inplace=True)
-    # TODO add other data types: raw, preprocessed, etc.
-    else:
-        return ValueError(f"Unknown data type: {data_type}")
+    # file with all information about the dataset
+    db_file = md.fetch_dataset_db(data_type, metadata)
+    # get the file
+    db = connector.get(
+        db_file,
+        decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","),
+    )
+    db.drop(columns=["Unnamed: 0"], inplace=True, errors="ignore")
+    db["image_type"] = [data_type for _ in range(len(db))]
     # save the database file
     save_to = _create_root_dir(save_to)
     save_as = os.path.join(save_to, f"available_{data_type}.csv")
@@ -150,7 +138,7 @@ def filter_data(db, subject_list=SUBJECTS, task_list=False):
     return filtered_db
 
 
-def get_file_paths(db):
+def get_file_paths(db, metadata=METADATA):
     """Get the file paths for each file in a (filtered) dataframe.
 
     Parameters
@@ -173,12 +161,8 @@ def get_file_paths(db):
     _file_names = db["path"].tolist()
     # update file names to be relative to the dataset
     file_names = []
+    root_dir = md.select_dataset(data_type, metadata)["root_dir"]
     for file in _file_names:
-        if data_type == "statistic_map":
-            root_dir = "resulting_smooth_maps"
-        # TODO add other data types: raw, preprocessed, etc.
-        else:
-            return ValueError(f"Unknown data type: {data_type}")
         # get the subject and session
         sub_ses = file.split("_")[:2]
         # put the file path together
@@ -301,7 +285,7 @@ def _download_file(src_file, dst_file, connector):
         return [], []
 
 
-def download_data(db, save_to=None, organise_by="session"):
+def download_data(db, save_to=None, organise_by="session", metadata=METADATA):
     """Download the files in a (filtered) dataframe.
 
     Parameters
