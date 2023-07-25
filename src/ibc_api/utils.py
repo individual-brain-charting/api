@@ -19,7 +19,7 @@ CACHE.run_maintenance()
 METADATA = md.fetch_metadata()
 
 # all subjects in IBC dataset
-SUBJECTS = md.ibc_subjects()
+SUBJECTS = md.SUBJECTS
 
 
 def authenticate():
