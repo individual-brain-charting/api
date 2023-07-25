@@ -36,14 +36,14 @@ def select_dataset(data_type, metadata=None):
         raise KeyError(
             f"Dataset type {data_type} not found in IBC collection."
         )
-    latest_version = find_latest_version(metadata, data_type)
+    latest_version = find_latest_version(dataset)
     dataset = dataset[latest_version]
     return dataset
 
 
-def find_latest_version(metadata, data_type):
+def find_latest_version(dataset):
     """Find the latest version of the dataset"""
-    dataset = select_dataset(metadata, data_type)
+
     latest_version_index = 0
     latest_version = 0
     for i, data in enumerate(dataset):
