@@ -82,7 +82,7 @@ def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     ----------
     data_type : str, optional
         dataset to fetch, by default "volume_maps", one of
-        ["volume_maps","surface_maps", "raw", "preprocessed"]
+        ["volume_maps", "surface_maps", "raw", "preprocessed"]
     save_as : str or None, optional
         filename to save this csv as, by default None, if None saves as
         "ibc_data/available_{data_type}.csv"
