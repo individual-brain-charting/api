@@ -8,7 +8,6 @@ from tqdm import tqdm
 import nibabel
 from siibra.retrieval.cache import CACHE
 import pandas as pd
-from io import BytesIO
 from datetime import datetime
 from . import metadata as md
 
@@ -96,11 +95,8 @@ def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     connector = _connect_ebrains(data_type)
     # file with all information about the dataset
     db_file = md.fetch_dataset_db(data_type, metadata)
-    # get the file
-    db = connector.get(
-        db_file,
-        decode_func=lambda b: pd.read_csv(BytesIO(b), delimiter=","),
-    )
+    # load the file as dataframe
+    db = pd.read_csv(db_file)
     db.drop(columns=["Unnamed: 0"], inplace=True, errors="ignore")
     db["image_type"] = [data_type for _ in range(len(db))]
     # save the database file
@@ -161,7 +157,7 @@ def get_file_paths(db, metadata=METADATA):
     _file_names = db["path"].tolist()
     # update file names to be relative to the dataset
     file_names = []
-    root_dir = md.select_dataset(data_type, metadata)["root_dir"]
+    root_dir = md.select_dataset(data_type, metadata)["root"]
     for file in _file_names:
         # get the subject and session
         sub_ses = file.split("_")[:2]
@@ -268,21 +264,26 @@ def _download_file(src_file, dst_file, connector):
         path to the downloaded file and time at which it was downloaded
     """
     if not os.path.exists(dst_file):
+        print(src_file)
         # load the file from ebrains
         src_data = connector.get(src_file)
-        if type(src_data) is nibabel.nifti1.Nifti1Image:
-            src_data.to_filename(dst_file)
-        # TODO add other data like json, etc.
+        # print(type(src_data))
+        if type(src_data) in [
+            nibabel.nifti1.Nifti1Image,
+            nibabel.gifti.gifti.GiftiImage,
+        ]:
+            nibabel.save(src_data, dst_file, mode="compat")
+            return dst_file
         else:
+            print("not a nifti file")
             return ValueError(
                 f"Don't know how to save file {src_file}"
                 f" of type {type(src_data)}"
             )
-        return dst_file, datetime.now()
     else:
         print(f"File {dst_file} already exists, skipping download.")
 
-        return [], []
+        return []
 
 
 def download_data(db, save_to=None, organise_by="session", metadata=METADATA):
@@ -324,7 +325,8 @@ def download_data(db, save_to=None, organise_by="session", metadata=METADATA):
         )
         # file path to save the data
         dst_file = os.path.join(dst_file_head, dst_file_base)
-        file_name, file_time = _download_file(src_file, dst_file, connector)
+        file_name = _download_file(src_file, dst_file, connector)
+        file_time = datetime.now()
         local_db = _update_local_db(local_db_file, file_name, file_time)
         # keep cache < 2GiB, delete oldest files first
         CACHE.run_maintenance()

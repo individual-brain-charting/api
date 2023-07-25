@@ -82,6 +82,6 @@ def fetch_metadata(file="datasets.json"):
 def fetch_dataset_db(data_type, metadata=None):
     """Fetch csv containing file-by-file information about the requested dataset."""
 
-    dataset = select_dataset(metadata, data_type)
+    dataset = select_dataset(data_type, metadata)
 
     return fetch_remote_file(dataset["db_file"])
