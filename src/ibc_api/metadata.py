@@ -16,7 +16,18 @@ SUBJECTS = [
 
 
 def _load_json(data_file):
-    """Read a given json file"""
+    """Read a given json file
+
+    Parameters
+    ----------
+    data_file : str
+        path to json file to read
+
+    Returns
+    -------
+    dict
+        json file loaded as a dictionary
+    """
     with open(data_file, "r") as f:
         data = json.load(f)
 
@@ -24,7 +35,25 @@ def _load_json(data_file):
 
 
 def select_dataset(data_type, metadata=None):
-    """Select metadata of the requested dataset"""
+    """Select metadata of the requested dataset
+
+    Parameters
+    ----------
+    data_type : str
+        what dataset to select, could be one of 'volume_maps', 'surface_maps', 'preprocessed', 'raw'
+    metadata : dict, optional
+        dictionary object containing version info, dataset ids etc, by default None
+
+    Returns
+    -------
+    dict
+        the metadata of latest version of the requested dataset
+
+    Raises
+    ------
+    KeyError
+        if the requested dataset is not found in the metadata
+    """
     if metadata is None:
         metadata = fetch_metadata()
     try:
@@ -33,14 +62,24 @@ def select_dataset(data_type, metadata=None):
         raise KeyError(
             f"Dataset type {data_type} not found in IBC collection."
         )
-    latest_version = find_latest_version(dataset)
+    latest_version = _find_latest_version(dataset)
     dataset = dataset[latest_version]
     return dataset
 
 
-def find_latest_version(dataset):
-    """Find the latest version of the dataset"""
+def _find_latest_version(dataset):
+    """Find the latest version of the dataset
 
+    Parameters
+    ----------
+    dataset : list of dicts
+        value of one of the datasets in the metadata, probably with multiple versions in a list
+
+    Returns
+    -------
+    int
+        index of the latest version of the dataset
+    """
     latest_version_index = 0
     latest_version = 0
     for i, data in enumerate(dataset):
@@ -52,12 +91,26 @@ def find_latest_version(dataset):
 
 
 def fetch_remote_file(
-    file="datasets.json",
+    file,
     remote_root=REMOTE_ROOT,
     local_root=LOCAL_ROOT,
 ):
-    """Fetch a file from the IBC docs repo"""
+    """Fetch a file from the IBC docs repo
 
+    Parameters
+    ----------
+    file : str
+        name of the file to fetch
+    remote_root : str, optional
+        root link to wherever the file is stores, by default REMOTE_ROOT
+    local_root : str, optional
+        location to write the fetched file, by default LOCAL_ROOT
+
+    Returns
+    -------
+    str
+        full path of the fetched file
+    """
     # Link to the json file on the IBC docs repo
     remote_file = f"{remote_root}/{file}"
     # save the file locally
@@ -72,6 +125,18 @@ def fetch_remote_file(
 
 
 def fetch_metadata(file="datasets.json"):
+    """Fetch the metadata file from the IBC docs repo
+
+    Parameters
+    ----------
+    file : str, optional
+        name of the file, by default "datasets.json"
+
+    Returns
+    -------
+    dict
+        json file loaded as a dictionary
+    """
     # Fetch the datasets.json file
     data_file = fetch_remote_file(file)
 
@@ -80,8 +145,19 @@ def fetch_metadata(file="datasets.json"):
 
 
 def fetch_dataset_db(data_type, metadata=None):
-    """Fetch csv containing file-by-file information about the requested dataset."""
+    """Fetch csv containing file-by-file information about the requested dataset.
 
+    Parameters
+    ----------
+    data_type : str
+        what dataset to select, could be one of 'volume_maps', 'surface_maps', 'preprocessed', 'raw'
+    metadata : dict, optional
+        dictionary object containing version info, dataset ids etc, by default None
+    Returns
+    -------
+    str
+        full path of the fetched file csv file
+    """
     dataset = select_dataset(data_type, metadata)
 
     return fetch_remote_file(dataset["db_file"])
