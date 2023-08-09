@@ -106,3 +106,44 @@ raw_df.loc[task_ref, "task"] = (
 raw_df["MB"] = raw_df["bytes"].astype(int).div(1024**2)
 
 
+# ----------- Preproc data ----------------
+
+# To follow previous db structure, rename name to path
+preproc_df.rename(columns={'name': 'path'}, inplace=True)
+
+
+# Get the file extension column, either gz, tsv, bval, bvec or json
+preproc_df["file_ext"] = (
+    preproc_df["path"].str.split("/").str[-1].str.split(".").str[-1]
+)
+preproc_df["file_ext"].unique()
+preproc_df["file_ext"].value_counts()
+
+
+# Get the subject column from the path
+preproc_df["subject"] = (
+    preproc_df[preproc_df["file_ext"].isin(["gz","tsv"])]["path"]
+    .str.split("/")
+    .str[-1]
+    .str.split("_")
+    .str[0]
+)
+
+
+# Get the session column from the path
+preproc_df["session"] = (
+    preproc_df[preproc_df["file_ext"].isin(["gz","tsv"])]["path"]
+    .str.split("/")
+    .str[-1]
+    .str.split("_")
+    .str[1]
+)
+
+
+# Get the modality column from the path (bold, sbref, fmap, doc, etc)
+preproc_df["modality"] = (
+    preproc_df["path"].str.split("/").str[-1]
+    .str.split(".").str[0]
+    .str.split("_").str[-1]
+)
+preproc_df["modality"].value_counts()
