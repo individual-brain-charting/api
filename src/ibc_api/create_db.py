@@ -61,8 +61,6 @@ raw_df["session"] = (
     raw_df[raw_df["file_ext"].isin(["gz","tsv","bval","bvec"])]["path"]
     .str.split("/")
     .str[-1]
-    .str.split(".")
-    .str[0]
     .str.split("_")
     .str[1]
 )
@@ -106,6 +104,8 @@ raw_df.loc[task_ref, "task"] = (
 raw_df["MB"] = raw_df["bytes"].astype(int).div(1024**2)
 
 
+raw_df.to_csv("raw_df.csv")
+
 # ----------- Preproc data ----------------
 
 # To follow previous db structure, rename name to path
@@ -146,4 +146,53 @@ preproc_df["modality"] = (
     .str.split(".").str[0]
     .str.split("_").str[-1]
 )
+preproc_df.loc[((preproc_df["modality"] == 'participants') | 
+                (preproc_df["file_ext"] == 'json')), "modality"] = "doc"
 preproc_df["modality"].value_counts()
+
+
+# Get the task column from the path and modality 
+preproc_df["task"] = (
+    preproc_df[preproc_df["modality"].isin([
+        "bold","timeseries","events"])]["path"]
+    .str.split("task-")
+    .str[-1]
+    .str.split("_")
+    .str[0]
+)
+# Get the task column for task-reference json files
+task_ref = (preproc_df["path"].str.contains("json") & 
+            preproc_df["path"].str.contains("task"))
+preproc_df.loc[task_ref, "task"] = (preproc_df.loc[task_ref, "path"]
+    .str.split("task-")
+    .str[-1]
+    .str.split("_")
+    .str[0]
+)
+
+
+# Get the direction
+dir_ref = preproc_df["path"].str.contains("dir")
+preproc_df.loc[dir_ref, "direction"] = (preproc_df.loc[dir_ref, "path"]
+    .str.split("dir-")
+    .str[-1]
+    .str.split("_")
+    .str[0]
+)
+
+
+# Get the space
+space_ref = preproc_df["path"].str.contains("space")
+preproc_df.loc[space_ref, "space"] = (preproc_df.loc[space_ref, "path"]
+    .str.split("space-")
+    .str[-1]
+    .str.split("_")
+    .str[0]
+)
+
+
+# Get the file size in MB
+preproc_df["MB"] = preproc_df["bytes"].astype(int).div(1024**2)
+
+
+preproc_df.to_csv("preproc_df.csv")
