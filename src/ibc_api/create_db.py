@@ -1,198 +1,49 @@
-# %%
+"""Script to create the database from the raw and preprocessed data on EBRAINS."""
+# import libraries
 import pandas as pd
 import ibc_api.utils as ibc
+from bids.layout import parse_file_entities
 
 ibc.authenticate()
-# %%
-raw = ibc._connect_ebrains("raw")
-preproc = ibc._connect_ebrains("preprocessed")
-
-# %%
-raw_df = pd.DataFrame(raw.__dict__["_files"])
-preproc_df = pd.DataFrame(preproc.__dict__["_files"])
-
-# %%
-raw_df.to_csv("raw.csv")
-preproc_df.to_csv("preproc.csv")
-
-# %%
-raw_df.head()
-preproc_df.head()
-
-# %%
-raw_df.columns
-raw_df["name"]
-
-# To follow previous db structure, rename name to path
-raw_df.rename(columns={'name': 'path'}, inplace=True)
-
-
-# Get the file extension column, either gz, tsv, bval, bvec or json
-raw_df["file_ext"] = (
-    raw_df["path"].str.split("/").str[-1].str.split(".").str[-1]
-)
-raw_df["file_ext"].unique()
-raw_df["file_ext"].value_counts()
-
-# Helper column to know when the file is a NIFTI, maybe not needed since all
-# gz files are NIFTI
-raw_df["isNII"] = (
-    raw_df[raw_df["file_ext"] == "gz"]["path"]
-    .str.split("/")
-    .str[-1]
-    .str.split(".")
-    .str[-2]
-)
-raw_df.loc[(raw_df["isNII"] == 'nii'), "isNII"] = "NIFTI"
-
-
-# Get the subject column from the path
-raw_df["subject"] = (
-    raw_df[raw_df["file_ext"].isin(["gz","tsv","bval","bvec"])]["path"]
-    .str.split("/")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-
-# Get the session column from the path
-raw_df["session"] = (
-    raw_df[raw_df["file_ext"].isin(["gz","tsv","bval","bvec"])]["path"]
-    .str.split("/")
-    .str[-1]
-    .str.split("_")
-    .str[1]
-)
-
-
-# Get the modality column from the path (bold, sbref, fmap, doc, etc)
-raw_df["modality"] = (
-    raw_df.apply(lambda row: 'doc' if row["file_ext"] == "json" else 
-                 row["path"].split("/")[-1].split(".")[0].split("_")[-1],
-                 axis=1)
-)
-# Decided to categorize participants.tsv and json files as doc, TBD!
-raw_df.loc[raw_df["modality"] == 
-           'participants', "modality"] = "doc"
-# Decided to rename 'epi' files modality as fmap, think it's more accurate
-raw_df.loc[(raw_df["modality"] == 
-            'epi') &   (raw_df["file_ext"] == 'gz'), "modality"] = "fmap"
-raw_df["modality"].value_counts()
-
-
-# Get the task column from the path and modality 
-raw_df["task"] = (
-    raw_df[raw_df["modality"].isin(["bold", "sbref","events"])]["path"]
-    .str.split("task-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-# Get the task column for task-reference json files
-task_ref = (raw_df["path"].str.contains("json") & 
-            raw_df["path"].str.contains("task"))
-raw_df.loc[task_ref, "task"] = (
-    raw_df.loc[task_ref, "path"]
-    .str.split("task-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-# Get the file size in MB
-raw_df["MB"] = raw_df["bytes"].astype(int).div(1024**2)
-
-
-raw_df.to_csv("raw_df.csv")
-
-# ----------- Preproc data ----------------
-
-# To follow previous db structure, rename name to path
-preproc_df.rename(columns={'name': 'path'}, inplace=True)
-
-
-# Get the file extension column, either gz, tsv, bval, bvec or json
-preproc_df["file_ext"] = (
-    preproc_df["path"].str.split("/").str[-1].str.split(".").str[-1]
-)
-preproc_df["file_ext"].unique()
-preproc_df["file_ext"].value_counts()
-
-
-# Get the subject column from the path
-preproc_df["subject"] = (
-    preproc_df[preproc_df["file_ext"].isin(["gz","tsv"])]["path"]
-    .str.split("/")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-
-# Get the session column from the path
-preproc_df["session"] = (
-    preproc_df[preproc_df["file_ext"].isin(["gz","tsv"])]["path"]
-    .str.split("/")
-    .str[-1]
-    .str.split("_")
-    .str[1]
-)
-
-
-# Get the modality column from the path (bold, sbref, fmap, doc, etc)
-preproc_df["modality"] = (
-    preproc_df["path"].str.split("/").str[-1]
-    .str.split(".").str[0]
-    .str.split("_").str[-1]
-)
-preproc_df.loc[((preproc_df["modality"] == 'participants') | 
-                (preproc_df["file_ext"] == 'json')), "modality"] = "doc"
-preproc_df["modality"].value_counts()
-
-
-# Get the task column from the path and modality 
-preproc_df["task"] = (
-    preproc_df[preproc_df["modality"].isin([
-        "bold","timeseries","events"])]["path"]
-    .str.split("task-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-# Get the task column for task-reference json files
-task_ref = (preproc_df["path"].str.contains("json") & 
-            preproc_df["path"].str.contains("task"))
-preproc_df.loc[task_ref, "task"] = (preproc_df.loc[task_ref, "path"]
-    .str.split("task-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-
-# Get the direction
-dir_ref = preproc_df["path"].str.contains("dir")
-preproc_df.loc[dir_ref, "direction"] = (preproc_df.loc[dir_ref, "path"]
-    .str.split("dir-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-
-# Get the space
-space_ref = preproc_df["path"].str.contains("space")
-preproc_df.loc[space_ref, "space"] = (preproc_df.loc[space_ref, "path"]
-    .str.split("space-")
-    .str[-1]
-    .str.split("_")
-    .str[0]
-)
-
-
-# Get the file size in MB
-preproc_df["MB"] = preproc_df["bytes"].astype(int).div(1024**2)
-
-
-preproc_df.to_csv("preproc_df.csv")
+for dataset in ["raw", "preprocessed", "volume_maps", "surface_maps"]:
+    # Get EBRAINS metadata about the dataset
+    ebrains_data = ibc._connect_ebrains(dataset)
+    # Get the file names and other info as dataframes
+    ebrains_df = pd.DataFrame(ebrains_data.__dict__["_files"])
+    filenames = ebrains_df["name"].tolist()
+    # parse filenames using pybids to get all the entities
+    bids_entities = []
+    for file in filenames:
+        bids_entity = parse_file_entities(
+            file, include_unmatched=True, config="ibc.json"
+        )
+        bids_entities.append(bids_entity)
+    # convert the list of dictionaries with bids entities to a dataframe
+    bids_df = pd.DataFrame(bids_entities)
+    # remove rows with empty path
+    bids_df = bids_df.dropna(how="all")
+    # add a column with the file sizes in MB
+    bids_df["megabytes"] = ebrains_df["bytes"].astype(int).div(1024**2)
+    # add a column with the dataset name
+    bids_df["dataset"] = [dataset] * len(bids_df)
+    root_dir = ebrains_df["name"].str.split("/").str[0]
+    # add a column with the file path without the root directory
+    path = ebrains_df["name"].str.split("/").str[1:].str.join("/")
+    bids_df["path"] = path
+    # separate surface maps and volume maps in different csv files
+    if dataset == "surface_maps":
+        mask = (root_dir == "resulting_smooth_maps_surface") & bids_df[
+            "extension"
+        ].isin([".gii", ".json"])
+        bids_df = bids_df[mask]
+    # there are some files with .gii extension in the volume maps folder
+    # filtering them out
+    elif dataset == "volume_maps":
+        mask = (root_dir == "resulting_smooth_maps") & bids_df[
+            "extension"
+        ].isin([".nii.gz", ".json"])
+        bids_df = bids_df[mask]
+    bids_df = bids_df.reset_index(drop=True)
+    # create a csv file with the bids entities
+    bids_df.to_csv(f"{dataset}.csv")
+    print(f"{dataset}.csv created!")

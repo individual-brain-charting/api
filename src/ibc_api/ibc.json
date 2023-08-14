@@ -1,0 +1,58 @@
+{
+    "name": "derivatives",
+    "entities": [
+        {
+            "name": "subject",
+            "pattern": "[/\\\\]+sub-([a-zA-Z0-9]+)",
+            "directory": "{subject}"
+        },
+        {
+            "name": "session",
+            "pattern": "[_/\\\\]+ses-([a-zA-Z0-9]+)",
+            "mandatory": false,
+            "directory": "{subject}{session}"
+        },
+        {
+            "name": "desc",
+            "pattern": "desc-([a-zA-Z0-9]+)"
+        },
+        {
+            "name": "hemi",
+            "pattern": "hemi-(lh|rh)"
+        },
+        {
+            "name": "task",
+            "pattern": "[_/\\\\]+task-([a-zA-Z0-9]+)"
+        },
+        {
+            "name": "direction",
+            "pattern": "[_/\\\\]+dir-([a-zA-Z0-9]+)"
+        },
+        {
+            "name": "run",
+            "pattern": "[_/\\\\]+run-(\\d+)",
+            "dtype": "int"
+        },
+        {
+            "name": "space",
+            "pattern": "[_/\\\\]+space-([a-zA-Z0-9]+)"
+        },
+        {
+            "name": "suffix",
+            "pattern": "(?:^|[_/\\\\])([a-zA-Z0-9]+)\\.[^/\\\\]+$"
+        },
+        {
+            "name": "datatype",
+            "pattern": "[/\\\\]+(anat|beh|dwi|eeg|fmap|func|ieeg|meg|motion|micr|nirs|perf|pet)[/\\\\]+"
+        },
+        {
+            "name": "extension",
+            "pattern": "[^./\\\\](\\.[^/\\\\]+)$"
+        },
+        {
+            "name": "contrast",
+            "pattern": "(?:^|[_/\\\\])+ZMap-(.+?)\\.[^/\\\\]+$"
+        }
+    ],
+    "default_path_patterns": []
+}
