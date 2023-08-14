@@ -10,9 +10,7 @@ REMOTE_ROOT = (
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(LOCAL_ROOT, exist_ok=True)
 
-SUBJECTS = [
-    f"sub-{sub:02d}" for sub in [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
-]
+SUBJECTS = [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
 
 
 def _load_json(data_file):
