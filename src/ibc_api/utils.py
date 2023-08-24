@@ -104,8 +104,6 @@ def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     pandas.DataFrame
         dataframe with information about each file in the dataset
     """
-    # connect to ebrains dataset
-    connector = _connect_ebrains(data_type)
     # file with all information about the dataset
     db_file = md.fetch_dataset_db(data_type, metadata)
     # load the file as dataframe
