@@ -4,7 +4,7 @@ import json
 import os
 
 REMOTE_ROOT = (
-    "https://api.github.com/repos/individual-brain-charting/docs/contents"
+    "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
 )
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -32,7 +32,7 @@ def _load_json(data_file):
     return data
 
 
-def select_dataset(data_type, metadata=None):
+def select_dataset(data_type, metadata=None, version=None):
     """Select metadata of the requested dataset
 
     Parameters
@@ -41,6 +41,8 @@ def select_dataset(data_type, metadata=None):
         what dataset to select, could be one of 'volume_maps', 'surface_maps', 'preprocessed', 'raw'
     metadata : dict, optional
         dictionary object containing version info, dataset ids etc, by default None
+    version : int, optional
+        version of the dataset to select, starts from 1, by default None
 
     Returns
     -------
@@ -60,8 +62,18 @@ def select_dataset(data_type, metadata=None):
         raise KeyError(
             f"Dataset type {data_type} not found in IBC collection."
         )
-    latest_version = _find_latest_version(dataset)
-    dataset = dataset[latest_version]
+    if version is not None:
+        version = version - 1
+        try:
+            dataset = dataset[version]
+        except IndexError:
+            raise IndexError(
+                f"Version {version + 1} of {data_type} dataset does not exist."
+            )
+        assert dataset["version"] == version + 1
+    else:
+        latest_version = _find_latest_version(dataset)
+        dataset = dataset[latest_version]
     return dataset
 
 

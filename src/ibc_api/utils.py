@@ -29,7 +29,7 @@ def authenticate():
     siibra.fetch_ebrains_token()
 
 
-def _connect_ebrains(data_type="volume_maps", metadata=METADATA):
+def _connect_ebrains(data_type="volume_maps", metadata=METADATA, version=None):
     """Connect to given IBC dataset on EBRAINS via Human Data Gateway.
 
     Parameters
@@ -38,16 +38,28 @@ def _connect_ebrains(data_type="volume_maps", metadata=METADATA):
         dataset to fetch, by default "statistic_map", can be one of
         ["volume_maps", "surface_maps", "preprocessed", "raw]
 
+    metadata : dict, optional
+        dictionary object containing version info, dataset ids etc, by default
+        METADATA
+
+    version : int, optional
+        version of the dataset to select, starts from 1, by default None
+
     Returns
     -------
     EbrainsHdgConnector
         connector to the dataset
     """
     # get the dataset id
-    dataset = md.select_dataset(data_type, metadata)
+    dataset = md.select_dataset(data_type, metadata, version)
     dataset_id = dataset["id"]
 
-    return EbrainsHdgConnector(dataset_id)
+    try:
+        return EbrainsHdgConnector(dataset_id)
+    except AttributeError:
+        raise ValueError(
+            f"Unable to fetch dataset {data_type}, version {version} from EBRAINS."
+        )
 
 
 def _create_root_dir(dir_path=None):
