@@ -1,6 +1,5 @@
 src/ibc_api.egg-info
 src/ibc_api/__pycache__
-src/ibc_api/data
 src/ibc-api
 ibc_data
 .ipynb_checkpoints
