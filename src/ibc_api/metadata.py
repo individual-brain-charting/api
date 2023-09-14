@@ -62,15 +62,20 @@ def select_dataset(data_type, metadata=None, version=None):
         raise KeyError(
             f"Dataset type {data_type} not found in IBC collection."
         )
+    # if user specifies a version of the dataset to use, pick that version
     if version is not None:
+        # version numbers start from 1, but index of the dataset starts from 0
         version = version - 1
+        # error handling when the requested version of dataset does not exist
         try:
             dataset = dataset[version]
         except IndexError:
             raise IndexError(
                 f"Version {version + 1} of {data_type} dataset does not exist."
             )
+        # make sure the version being served is the same as requested
         assert dataset["version"] == version + 1
+    # if version is not specified simply pick the latest version of dataset
     else:
         latest_version = _find_latest_version(dataset)
         dataset = dataset[latest_version]
