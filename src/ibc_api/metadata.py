@@ -3,14 +3,12 @@
 import json
 import os
 
-REMOTE_ROOT = (
-    "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
-)
+REMOTE_ROOT = "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(LOCAL_ROOT, exist_ok=True)
 
-SUBJECTS = [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
+SUBJECTS = [f"{subject:02}" for subject in range(1, 16)]
 
 
 def _load_json(data_file):

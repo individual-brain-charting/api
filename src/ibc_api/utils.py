@@ -107,7 +107,10 @@ def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     # file with all information about the dataset
     db_file = md.fetch_dataset_db(data_type, metadata)
     # load the file as dataframe
-    db = pd.read_csv(db_file)
+    # convert subject, session and run to string to avoid losing leading zeros
+    db = pd.read_csv(
+        db_file, converters={"subject": str, "session": str, "run": str}
+    )
     db.drop(columns=["Unnamed: 0"], inplace=True, errors="ignore")
     # save the database file
     save_to = _create_root_dir(save_to)

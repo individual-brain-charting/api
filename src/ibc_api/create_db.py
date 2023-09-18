@@ -5,8 +5,10 @@ import os
 import ibc_api.utils as ibc
 from bids.layout import parse_file_entities
 
+datasets = ["raw", "preprocessed", "volume_maps", "surface_maps"]
+
 ibc.authenticate()
-for dataset in ["raw", "preprocessed", "volume_maps", "surface_maps"]:
+for dataset in datasets:
     for version in range(1, 4):
         # Get EBRAINS metadata about the dataset
         try:
