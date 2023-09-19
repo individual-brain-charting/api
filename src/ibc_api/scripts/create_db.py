@@ -1,4 +1,6 @@
-"""Script to create the database from the raw and preprocessed data on EBRAINS."""
+"""Script to create the database from the raw, preprocessed, volume maps and surface maps
+ data on EBRAINS."""
+
 # import libraries
 import pandas as pd
 import os
@@ -23,7 +25,7 @@ for dataset in datasets:
         bids_entities = []
         for file in filenames:
             bids_entity = parse_file_entities(
-                file, include_unmatched=True, config="ibc.json"
+                file, include_unmatched=True, config="ibc_conifg.json"
             )
             bids_entities.append(bids_entity)
         # convert the list of dictionaries with bids entities to a dataframe
@@ -53,6 +55,6 @@ for dataset in datasets:
             bids_df = bids_df[mask]
         bids_df = bids_df.reset_index(drop=True)
         # create a csv file with the bids entities
-        csv_file = os.path.join("data", f"{dataset}_v{version}.csv")
+        csv_file = os.path.join("..", "data", f"{dataset}_v{version}.csv")
         bids_df.to_csv(csv_file)
         print(f"{csv_file} created!")
