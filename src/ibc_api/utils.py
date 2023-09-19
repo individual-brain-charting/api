@@ -128,7 +128,7 @@ def filter_data(db, subject_list=SUBJECTS, task_list=False):
         dataframe with information about all files in the dataset
     subject_list : list, optional
         list of subjects to keep, by default SUBJECTS, SUBJECTS contains all
-        subjects from 1 to 15
+        subjects from ["01", "02", "04",...,"15"]
     task_list : list or bool, optional
         list of tasks to keep, by default False
 
