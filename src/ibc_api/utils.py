@@ -158,7 +158,7 @@ def get_file_paths(db, metadata=METADATA):
 
     Returns
     -------
-    list, list
+    filenames, list
         lists of file paths for each file in the input dataframe. First list is the remote file paths and second list is the local file paths
     """
     # get the data type from the db
