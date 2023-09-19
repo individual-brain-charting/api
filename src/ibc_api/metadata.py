@@ -3,16 +3,12 @@
 import json
 import os
 
-REMOTE_ROOT = (
-    "https://api.github.com/repos/individual-brain-charting/docs/contents"
-)
+REMOTE_ROOT = "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(LOCAL_ROOT, exist_ok=True)
 
-SUBJECTS = [
-    f"sub-{sub:02d}" for sub in [1, 2, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15]
-]
+SUBJECTS = [f"{subject:02}" for subject in range(1, 16)]
 
 
 def _load_json(data_file):
@@ -34,7 +30,7 @@ def _load_json(data_file):
     return data
 
 
-def select_dataset(data_type, metadata=None):
+def select_dataset(data_type, metadata=None, version=None):
     """Select metadata of the requested dataset
 
     Parameters
@@ -43,6 +39,8 @@ def select_dataset(data_type, metadata=None):
         what dataset to select, could be one of 'volume_maps', 'surface_maps', 'preprocessed', 'raw'
     metadata : dict, optional
         dictionary object containing version info, dataset ids etc, by default None
+    version : int, optional
+        version of the dataset to select, starts from 1, by default None
 
     Returns
     -------
@@ -62,8 +60,23 @@ def select_dataset(data_type, metadata=None):
         raise KeyError(
             f"Dataset type {data_type} not found in IBC collection."
         )
-    latest_version = _find_latest_version(dataset)
-    dataset = dataset[latest_version]
+    # if user specifies a version of the dataset to use, pick that version
+    if version is not None:
+        # version numbers start from 1, but index of the dataset starts from 0
+        version = version - 1
+        # error handling when the requested version of dataset does not exist
+        try:
+            dataset = dataset[version]
+        except IndexError:
+            raise IndexError(
+                f"Version {version + 1} of {data_type} dataset does not exist."
+            )
+        # make sure the version being served is the same as requested
+        assert dataset["version"] == version + 1
+    # if version is not specified simply pick the latest version of dataset
+    else:
+        latest_version = _find_latest_version(dataset)
+        dataset = dataset[latest_version]
     return dataset
 
 
