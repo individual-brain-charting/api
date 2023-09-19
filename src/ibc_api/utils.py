@@ -87,6 +87,41 @@ def _create_root_dir(dir_path=None):
     return dir_path
 
 
+def download_gm_mask(resolution=1.5, save_to=None):
+    """Download the grey matter mask
+
+    Parameters
+    ----------
+    resolution : float, optional
+        resolution of the mask, by default 1.5
+    save_to : str, optional
+        where to save the mask, by default None
+
+    Returns
+    -------
+    save_as : str
+        path to the downloaded mask
+    """
+
+    if resolution == 1.5:
+        mask = "gm_mask_1_5mm.nii.gz"
+    else:
+        mask = "gm_mask_3mm.nii.gz"
+
+    remote_file = "https://api.github.com/repos/individual-brain-charting/public_analysis_code/contents/ibc_data"
+    remote_file = os.path.join(remote_file, mask)
+    # save the database file
+    save_to = _create_root_dir(save_to)
+    save_as = os.path.join(save_to, mask)
+
+    # use curl with github api to download the file
+    os.system(
+        f"curl -s -S -L -H 'Accept: application/vnd.github.v4.raw' -H 'X-GitHub-Api-Version: 2022-11-28' {remote_file} -o '{save_as}'"
+    )
+
+    return save_as
+
+
 def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     """Fetch a csv file describing each file in a given IBC dataset on EBRAINS.
 
