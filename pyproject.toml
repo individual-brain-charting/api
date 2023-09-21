@@ -11,5 +11,4 @@ dependencies = [
     "nibabel",
     "pandas",
     "tqdm",
-    "ibc_public @ git+https://github.com/individual-brain-charting/public_analysis_code"
 ]
