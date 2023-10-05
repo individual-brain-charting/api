@@ -3,6 +3,7 @@
 
 import siibra
 from siibra.retrieval.repositories import EbrainsHdgConnector
+from siibra.retrieval.requests import EbrainsRequest, SiibraHttpRequestError
 import os
 from tqdm import tqdm
 import nibabel
@@ -22,12 +23,37 @@ METADATA = md.fetch_metadata()
 # all subjects in IBC dataset
 SUBJECTS = md.SUBJECTS
 
+# token root directory
+TOKEN_ROOT = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(TOKEN_ROOT, exist_ok=True)
 
-def authenticate():
+
+def _authenticate(token_dir=TOKEN_ROOT):
     """This function authenticates you to EBRAINS. It would return a link that
     would prompt you to login or create an EBRAINS account. Read more about
-    registering for EBRAINS here: https://ebrains.eu/register"""
-    siibra.fetch_ebrains_token()
+    registering for EBRAINS here: https://ebrains.eu/register.
+    Once authenticated, it would store an access token locally in a token file and
+    use that token to connect to EBRAINS in the future. If the token expires, it
+    would prompt you to login again.
+    """
+
+    # read the token file
+    token_file = os.path.join(token_dir, "token1")
+    if os.path.exists(token_file):
+        with open(token_file, "r") as f:
+            token = f.read()
+            # set the token
+            siibra.set_ebrains_token(token)
+    else:
+        siibra.fetch_ebrains_token()
+        token = EbrainsRequest._KG_API_TOKEN
+        # save the token
+        with open(token_file, "w") as f:
+            f.write(token)
+
+    f.close()
+
+    return token_file
 
 
 def _connect_ebrains(data_type="volume_maps", metadata=METADATA, version=None):
@@ -55,12 +81,21 @@ def _connect_ebrains(data_type="volume_maps", metadata=METADATA, version=None):
     dataset = md.select_dataset(data_type, metadata, version)
     dataset_id = dataset["id"]
 
+    # authenticate with ebrains
+    token_file = _authenticate()
+
     try:
         return EbrainsHdgConnector(dataset_id)
     except AttributeError:
         raise ValueError(
             f"Unable to fetch dataset {data_type}, version {version} from EBRAINS."
         )
+    except SiibraHttpRequestError:
+        print("Saved token is invalid. Fetching a new token.")
+        # delete the token file
+        os.remove(token_file)
+        # try connecting again
+        return _connect_ebrains(data_type, metadata, version)
 
 
 def _create_root_dir(dir_path=None):
