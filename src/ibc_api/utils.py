@@ -38,7 +38,7 @@ def _authenticate(token_dir=TOKEN_ROOT):
     """
 
     # read the token file
-    token_file = os.path.join(token_dir, "token1")
+    token_file = os.path.join(token_dir, "token")
     if os.path.exists(token_file):
         with open(token_file, "r") as f:
             token = f.read()
