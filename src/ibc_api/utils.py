@@ -1,5 +1,6 @@
 """API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
 """
+
 # %$
 import siibra
 from siibra.retrieval.repositories import EbrainsHdgConnector
@@ -10,7 +11,8 @@ import nibabel
 from siibra.retrieval.cache import CACHE
 import pandas as pd
 from datetime import datetime
-#from . import metadata as md
+
+# from . import metadata as md
 import metadata as md
 import json
 import numpy as np
@@ -270,17 +272,15 @@ def get_file_paths(db, metadata=METADATA):
     return remote_file_names, local_file_names
 
 
-def _update_local_db(db_file, file_names, file_times):
+def _update_local_db(db_file, files_data):
     """Update the local database of downloaded files.
 
     Parameters
     ----------
     db_file : str
         path to the local database file
-    file_names : str or list
-        path to the downloaded file(s)
-    file_times : str or list
-        time at which the file(s) were downloaded
+     files_data : list of tuples
+        list of tuples where each tuple contains (file_name, file_time)
 
     Returns
     -------
@@ -288,9 +288,8 @@ def _update_local_db(db_file, file_names, file_times):
         updated local database
     """
 
-    if type(file_names) is str:
-        file_names = [file_names]
-        file_times = [file_times]
+    file_names = [file_data[0] for file_data in files_data]
+    file_times = [file_data[1] for file_data in files_data]
 
     if not os.path.exists(db_file):
         # create a new database
@@ -381,46 +380,14 @@ def _download_file(src_file, dst_file, connector):
         os.makedirs(dst_file_dir, exist_ok=True)
         # save the file locally
         dst_file = _write_file(dst_file, src_data)
-        return dst_file
+        download_time = datetime.now()
+        return dst_file, download_time
     else:
         print(f"File {dst_file} already exists, skipping download.")
-
-        return []
-
-
-def _download_single_row(data_type, local_db_file, save_to, src_file,
-                         dst_file):
-    """Download a file from ebrains.
-
-    Parameters
-    ----------
-    src_file : str
-        path to the file on ebrains
-    dst_file : str
-        path to save the file to locally
-    connector : EbrainsHdgConnector
-        connector to the IBC dataset on ebrains
-
-    Returns
-    -------
-    str, datetime
-        path to the downloaded file and time at which it was downloaded
-    """
-    print("Going parallel!", src_file)
-    connector = _connect_ebrains(data_type)
-    print("Connected to ebrains!")
-    dst_file = os.path.join(save_to, dst_file)
-    file_name = _download_file(src_file, dst_file, connector)
-    file_time = datetime.now()
-    local_db = _update_local_db(local_db_file, file_name, file_time)
-    CACHE.run_maintenance()
-    print(src_file, "Downloaded")
-
-    return local_db
+        return dst_file, None
 
 
-
-def download_data(db, save_to=None, parallel=True):
+def download_data(db, save_to=None):
     """Download the files in a (filtered) dataframe.
 
     Parameters
@@ -441,7 +408,7 @@ def download_data(db, save_to=None, parallel=True):
     db_length = len(db)
     if db_length == 0:
         raise ValueError(
-            f"The input dataframe is empty. Please make sure that it at least has columns 'dataset' and 'path' and a row containing appropriate values corresponding to those columns."
+            f"The input dataframe is empty. Please make sure that it atleast has columns 'dataset' and 'path' and a row containing appropriate values corresponding to those columns."
         )
     else:
         print(f"Found {db_length} files to download.")
@@ -451,11 +418,11 @@ def download_data(db, save_to=None, parallel=True):
         raise ValueError(
             f"The input dataframe should have columns 'dataset' and 'path' and a row containing appropriate values corresponding to those columns."
         )
- 
+
     # get data type from db
     data_type = db["dataset"].unique()[0]
     # connect to ebrains dataset
-    #connector = _connect_ebrains(data_type)
+    connector = _connect_ebrains(data_type)
     # get the file names as they are on ebrains
     src_file_names, dst_file_names = get_file_paths(db)
     # set the save directory
@@ -463,36 +430,33 @@ def download_data(db, save_to=None, parallel=True):
     # track downloaded file names and times
     local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
 
-    # Initialize a tqdm progress bar
-    progress_bar = tqdm(total=len(db), desc="Overall Progress",
-                        colour="green")
-
-    if parallel:
-        # Use all available cores
-        n_jobs = 4
-        # Download the files in parallel
-        local_db = Parallel(n_jobs=n_jobs)(
-            delayed(_download_single_row)(data_type, local_db_file, save_to,
-                                          src_file, dst_file)
-            for src_file, dst_file in zip(src_file_names, dst_file_names)
-        )
-    else:
-    # download the files
-        connector = _connect_ebrains(data_type)
-        for src_file, dst_file in zip(src_file_names, dst_file_names):
-            print("Going serial", src_file)
-            # final file path to save the data
-            dst_file = os.path.join(save_to, dst_file)
+    """
+    def download_and_update(src_file, dst_file, connector):
+        if not os.path.exists(dst_file):
+            #dst_file_path = os.path.join(save_to, dst_file)
             file_name = _download_file(src_file, dst_file, connector)
             file_time = datetime.now()
-            local_db = _update_local_db(local_db_file, file_name, file_time)
-            print(src_file, "Downloaded")
-            # keep cache < 2GB, delete oldest files first
-            CACHE.run_maintenance()
+    """
 
-    # close the progress bar
-    progress_bar.close()    
-    
+    # download the files
+    results = Parallel(n_jobs=4, backend="threading")(
+        delayed(_download_file)(src_file, dst_file, connector)
+        for src_file, dst_file in tqdm(
+            zip(src_file_names, dst_file_names),
+            position=1,
+            leave=True,
+            total=db_length,
+            desc="Overall Progress: ",
+            colour="green",
+        )
+    )
+
+    # filter out results with None as download time to save a clean database
+    results = [result for result in results if result[1] is not None]
+    local_db = _update_local_db(local_db_file, results)
+
+    CACHE.run_maintenance()
+
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
         f"{local_db_file} for details."
