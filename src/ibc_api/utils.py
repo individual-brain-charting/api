@@ -1,23 +1,23 @@
 """API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
 """
 
-# %$
-import siibra
-from siibra.retrieval.repositories import EbrainsHdgConnector
-from siibra.retrieval.requests import EbrainsRequest, SiibraHttpRequestError
+import json
 import os
-from tqdm import tqdm
-import nibabel
-from siibra.retrieval.cache import CACHE
-import pandas as pd
 from datetime import datetime
 
-# from . import metadata as md
-import metadata as md
-import json
+import nibabel
 import numpy as np
+import pandas as pd
+
+# %$
+import siibra
 from joblib import Parallel, delayed
-import pdb
+from siibra.retrieval.cache import CACHE
+from siibra.retrieval.repositories import EbrainsHdgConnector
+from siibra.retrieval.requests import EbrainsRequest, SiibraHttpRequestError
+from tqdm import tqdm
+
+from . import metadata as md
 
 # clear cache
 CACHE.clear()
@@ -429,14 +429,6 @@ def download_data(db, save_to=None):
     save_to = _create_root_dir(save_to)
     # track downloaded file names and times
     local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
-
-    """
-    def download_and_update(src_file, dst_file, connector):
-        if not os.path.exists(dst_file):
-            #dst_file_path = os.path.join(save_to, dst_file)
-            file_name = _download_file(src_file, dst_file, connector)
-            file_time = datetime.now()
-    """
 
     # download the files
     results = Parallel(n_jobs=4, backend="threading")(
