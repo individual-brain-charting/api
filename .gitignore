@@ -3,3 +3,4 @@ src/ibc_api/__pycache__
 src/ibc-api
 ibc_data
 .ipynb_checkpoints
+src/ibc_api/data/token
