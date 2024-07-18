@@ -1,6 +1,7 @@
 """API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
 """
 
+# %$
 import json
 import os
 from datetime import datetime
@@ -8,8 +9,6 @@ from datetime import datetime
 import nibabel
 import numpy as np
 import pandas as pd
-
-# %$
 import siibra
 from joblib import Parallel, delayed
 from siibra.retrieval.cache import CACHE
@@ -231,7 +230,7 @@ def filter_data(db, subject_list=SUBJECTS, task_list=False):
     return filtered_db
 
 
-def get_file_paths(db, metadata=METADATA):
+def get_file_paths(db, metadata=METADATA, save_to_dir=None):
     """Get the remote and local file paths for each file in a (filtered) dataframe.
 
     Parameters
@@ -256,7 +255,10 @@ def get_file_paths(db, metadata=METADATA):
     remote_file_names = []
     local_file_names = []
     remote_root_dir = md.select_dataset(data_type, metadata)["root"]
-    local_root_dir = data_type
+    if save_to_dir == None:
+        local_root_dir = data_type
+    else:
+        local_root_dir = os.path.join(save_to_dir, data_type)
     for file in file_names:
         # put the file path together
         # always use "/" as the separator for remote file paths
@@ -272,7 +274,8 @@ def get_file_paths(db, metadata=METADATA):
     return remote_file_names, local_file_names
 
 
-def _update_local_db(db_file, files_data):
+# def _update_local_db(db_file, files_data):
+def _update_local_db(db_file, file_names, file_times):
     """Update the local database of downloaded files.
 
     Parameters
@@ -288,8 +291,12 @@ def _update_local_db(db_file, files_data):
         updated local database
     """
 
-    file_names = [file_data[0] for file_data in files_data]
-    file_times = [file_data[1] for file_data in files_data]
+    # file_names = [file_data[0] for file_data in files_data]
+    # file_times = [file_data[1] for file_data in files_data]
+
+    if type(file_names) is str:
+        file_names = [file_names]
+        file_times = [file_times]
 
     if not os.path.exists(db_file):
         # create a new database
@@ -372,6 +379,7 @@ def _download_file(src_file, dst_file, connector):
     str, datetime
         path to the downloaded file and time at which it was downloaded
     """
+    # CACHE.run_maintenance()
     if not os.path.exists(dst_file):
         # load the file from ebrains
         src_data = connector.get(src_file)
@@ -380,11 +388,11 @@ def _download_file(src_file, dst_file, connector):
         os.makedirs(dst_file_dir, exist_ok=True)
         # save the file locally
         dst_file = _write_file(dst_file, src_data)
-        download_time = datetime.now()
-        return dst_file, download_time
+        # download_time = datetime.now()
+        return dst_file
     else:
         print(f"File {dst_file} already exists, skipping download.")
-        return dst_file, None
+        return dst_file
 
 
 def download_data(db, save_to=None):
@@ -423,35 +431,41 @@ def download_data(db, save_to=None):
     data_type = db["dataset"].unique()[0]
     # connect to ebrains dataset
     connector = _connect_ebrains(data_type)
-    # get the file names as they are on ebrains
-    src_file_names, dst_file_names = get_file_paths(db)
     # set the save directory
     save_to = _create_root_dir(save_to)
     # track downloaded file names and times
     local_db_file = os.path.join(save_to, f"downloaded_{data_type}.csv")
+    # get the file names as they are on ebrains
+    src_file_names, dst_file_names = get_file_paths(db, save_to_dir=save_to)
 
     # download the files
-    results = Parallel(n_jobs=4, backend="threading")(
-        delayed(_download_file)(src_file, dst_file, connector)
-        for src_file, dst_file in tqdm(
-            zip(src_file_names, dst_file_names),
-            position=1,
-            leave=True,
-            total=db_length,
-            desc="Overall Progress: ",
-            colour="green",
+    with tqdm(
+        total=db_length,
+        position=1,
+        leave=True,
+        desc="Overall Progress",
+        colour="green",
+    ) as pbar:
+
+        def _download_and_update_progress(src_file, dst_file, connector):
+            file_name = _download_file(src_file, dst_file, connector)
+            file_time = datetime.now()
+            local_db = _update_local_db(local_db_file, file_name, file_time)
+            CACHE.run_maintenance()  # keep cache < 2GB
+            pbar.update(1)
+
+            return file_name, file_time, local_db
+
+        results = Parallel(n_jobs=8, backend="threading")(
+            delayed(_download_and_update_progress)(
+                src_file, dst_file, connector
+            )
+            for src_file, dst_file in zip(src_file_names, dst_file_names)
         )
-    )
-
-    # filter out results with None as download time to save a clean database
-    results = [result for result in results if result[1] is not None]
-    local_db = _update_local_db(local_db_file, results)
-
-    CACHE.run_maintenance()
 
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
         f"{local_db_file} for details."
     )
 
-    return local_db
+    return results
