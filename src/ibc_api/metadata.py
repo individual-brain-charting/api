@@ -3,6 +3,8 @@
 import json
 import os
 
+import requests
+
 REMOTE_ROOT = "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -103,11 +105,7 @@ def _find_latest_version(dataset):
     return latest_version_index
 
 
-def fetch_remote_file(
-    file,
-    remote_root=REMOTE_ROOT,
-    local_root=LOCAL_ROOT,
-):
+def fecth_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
     """Fetch a file from the IBC docs repo
 
     Parameters
@@ -124,17 +122,17 @@ def fetch_remote_file(
     str
         full path of the fetched file
     """
-    # Link to the json file on the IBC docs repo
-    remote_file = f"{remote_root}/{file}"
+    # Link to the file on the IBC docs repo
+    r = requests.get(f"{remote_root}/{file}")
     # save the file locally
-    save_as = os.path.join(local_root, file)
-    # use curl with github api to download the file
-    os.system(
-        f"curl -s -S -L -H 'Accept: application/vnd.github.v4.raw' -H 'X-GitHub-Api-Version: 2022-11-28' {remote_file} -o '{save_as}'"
-    )
+    f = open(os.path.join(local_root, file), "wb")
+    for chunk in r.iter_content(chunk_size=512):
+        if chunk:
+            f.write(chunk)
+    f.close()
 
     # Return the data
-    return save_as
+    return f.name
 
 
 def fetch_metadata(file="datasets.json"):
