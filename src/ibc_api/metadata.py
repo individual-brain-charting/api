@@ -139,8 +139,7 @@ def fetch_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
         return local_file
 
     except requests.exceptions.HTTPError as err:
-        print(f"Error fetching {file}: {err}")
-        return None
+        raise(f"Error fetching {file}: {err}")
 
 
 def fetch_metadata(file="datasets.json"):
