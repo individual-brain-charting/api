@@ -5,7 +5,7 @@ import os
 
 import requests
 
-REMOTE_ROOT = "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
+REMOTE_ROOT = "https://raw.githubusercontent.com/individual-brain-charting/api/main/src/ibc_api/data/"
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(LOCAL_ROOT, exist_ok=True)
@@ -105,7 +105,7 @@ def _find_latest_version(dataset):
     return latest_version_index
 
 
-def fecth_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
+def fetch_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
     """Fetch a file from the IBC docs repo
 
     Parameters
@@ -122,17 +122,25 @@ def fecth_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
     str
         full path of the fetched file
     """
-    # Link to the file on the IBC docs repo
-    r = requests.get(f"{remote_root}/{file}")
-    # save the file locally
-    f = open(os.path.join(local_root, file), "wb")
-    for chunk in r.iter_content(chunk_size=512):
-        if chunk:
-            f.write(chunk)
-    f.close()
+    # Construct the url
+    url = f"{remote_root}/{file}"
 
-    # Return the data
-    return f.name
+    try:
+        r = requests.get(url)
+        r.raise_for_status()
+
+        # Save the file locally
+        local_file = os.path.join(local_root, file)
+        with open(local_file, "wb") as f:
+            for chunk in r.iter_content(chunk_size=512):
+                if chunk:
+                    f.write(chunk)
+
+        return local_file
+
+    except requests.exceptions.HTTPError as err:
+        print(f"Error fetching {file}: {err}")
+        return None
 
 
 def fetch_metadata(file="datasets.json"):
