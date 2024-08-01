@@ -3,7 +3,9 @@
 import json
 import os
 
-REMOTE_ROOT = "https://api.github.com/repos/individual-brain-charting/api/contents/src/ibc_api/data"
+import requests
+
+REMOTE_ROOT = "https://raw.githubusercontent.com/individual-brain-charting/api/main/src/ibc_api/data/"
 
 LOCAL_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(LOCAL_ROOT, exist_ok=True)
@@ -103,11 +105,7 @@ def _find_latest_version(dataset):
     return latest_version_index
 
 
-def fetch_remote_file(
-    file,
-    remote_root=REMOTE_ROOT,
-    local_root=LOCAL_ROOT,
-):
+def fetch_remote_file(file, remote_root=REMOTE_ROOT, local_root=LOCAL_ROOT):
     """Fetch a file from the IBC docs repo
 
     Parameters
@@ -124,17 +122,24 @@ def fetch_remote_file(
     str
         full path of the fetched file
     """
-    # Link to the json file on the IBC docs repo
-    remote_file = f"{remote_root}/{file}"
-    # save the file locally
-    save_as = os.path.join(local_root, file)
-    # use curl with github api to download the file
-    os.system(
-        f"curl -s -S -L -H 'Accept: application/vnd.github.v4.raw' -H 'X-GitHub-Api-Version: 2022-11-28' {remote_file} -o '{save_as}'"
-    )
+    # Construct the url
+    url = f"{remote_root}/{file}"
 
-    # Return the data
-    return save_as
+    try:
+        r = requests.get(url)
+        r.raise_for_status()
+
+        # Save the file locally
+        local_file = os.path.join(local_root, file)
+        with open(local_file, "wb") as f:
+            for chunk in r.iter_content(chunk_size=512):
+                if chunk:
+                    f.write(chunk)
+
+        return local_file
+
+    except requests.exceptions.HTTPError as err:
+        raise(f"Error fetching {file}: {err}")
 
 
 def fetch_metadata(file="datasets.json"):
