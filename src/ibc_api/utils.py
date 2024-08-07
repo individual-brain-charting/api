@@ -10,11 +10,10 @@ import nibabel
 import numpy as np
 import pandas as pd
 import siibra
-from joblib import Parallel, delayed
+from joblib import Memory, Parallel, delayed
 from siibra.retrieval.cache import CACHE
 from siibra.retrieval.repositories import EbrainsHdgConnector
 from siibra.retrieval.requests import EbrainsRequest, SiibraHttpRequestError
-from tqdm import tqdm
 
 from . import metadata as md
 
@@ -30,6 +29,11 @@ SUBJECTS = md.SUBJECTS
 # token root directory
 TOKEN_ROOT = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(TOKEN_ROOT, exist_ok=True)
+
+# memory cache
+joblib_cache_dir = os.path.join(os.path.dirname(__file__), "cache")
+os.makedirs(joblib_cache_dir, exist_ok=True)
+memory = Memory(joblib_cache_dir, verbose=0)
 
 
 def _authenticate(token_dir=TOKEN_ROOT):
@@ -274,7 +278,6 @@ def get_file_paths(db, metadata=METADATA, save_to_dir=None):
     return remote_file_names, local_file_names
 
 
-# def _update_local_db(db_file, files_data):
 def _update_local_db(db_file, file_names, file_times):
     """Update the local database of downloaded files.
 
@@ -290,9 +293,6 @@ def _update_local_db(db_file, file_names, file_times):
     pandas.DataFrame
         updated local database
     """
-
-    # file_names = [file_data[0] for file_data in files_data]
-    # file_times = [file_data[1] for file_data in files_data]
 
     if type(file_names) is str:
         file_names = [file_names]
@@ -362,6 +362,7 @@ def _write_file(file, data):
     return file
 
 
+@memory.cache
 def _download_file(src_file, dst_file, connector):
     """Download a file from ebrains.
 
@@ -395,7 +396,8 @@ def _download_file(src_file, dst_file, connector):
         return dst_file
 
 
-def download_data(db, save_to=None):
+# download the files
+def download_data(db, num_jobs=4, save_to=None):
     """Download the files in a (filtered) dataframe.
 
     Parameters
@@ -430,6 +432,7 @@ def download_data(db, save_to=None):
     # get data type from db
     data_type = db["dataset"].unique()[0]
     # connect to ebrains dataset
+    print("... Fetching token and connecting to EBRAINS ...")
     connector = _connect_ebrains(data_type)
     # set the save directory
     save_to = _create_root_dir(save_to)
@@ -438,30 +441,21 @@ def download_data(db, save_to=None):
     # get the file names as they are on ebrains
     src_file_names, dst_file_names = get_file_paths(db, save_to_dir=save_to)
 
-    # download the files
-    with tqdm(
-        total=db_length,
-        position=1,
-        leave=True,
-        desc="Overall Progress",
-        colour="green",
-    ) as pbar:
+    # helper to process the parallel download
+    def _download_and_update_progress(src_file, dst_file, connector):
+        file_name = _download_file(src_file, dst_file, connector)
+        file_time = datetime.now()
+        local_db = _update_local_db(local_db_file, file_name, file_time)
+        CACHE.run_maintenance()  # keep cache < 2GB
 
-        def _download_and_update_progress(src_file, dst_file, connector):
-            file_name = _download_file(src_file, dst_file, connector)
-            file_time = datetime.now()
-            local_db = _update_local_db(local_db_file, file_name, file_time)
-            CACHE.run_maintenance()  # keep cache < 2GB
-            pbar.update(1)
+        return file_name, file_time, local_db
 
-            return file_name, file_time, local_db
-
-        results = Parallel(n_jobs=8, backend="threading")(
-            delayed(_download_and_update_progress)(
-                src_file, dst_file, connector
-            )
-            for src_file, dst_file in zip(src_file_names, dst_file_names)
-        )
+    # download finally
+    print("...Starting download...")
+    results = Parallel(n_jobs=num_jobs, backend="threading", verbose=10)(
+        delayed(_download_and_update_progress)(src_file, dst_file, connector)
+        for src_file, dst_file in zip(src_file_names, dst_file_names)
+    )
 
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
