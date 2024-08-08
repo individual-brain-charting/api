@@ -370,6 +370,7 @@ def _write_file(file, data):
     return file
 
 
+@memory.cache
 def _download_file(src_file, dst_file, connector):
     """Download a file from ebrains.
 
@@ -402,7 +403,6 @@ def _download_file(src_file, dst_file, connector):
         return dst_file
 
 
-@memory.cache
 def download_data(db, num_jobs=2, save_to=None):
     """Download the files in a (filtered) dataframe.
 
@@ -470,9 +470,7 @@ def download_data(db, num_jobs=2, save_to=None):
     # update the local database
     results = [res for res in results if res[0] is not None]
     if len(results) == 0:
-        raise RuntimeError(
-            f"No files downloaded! Please check errors and try again."
-        )
+        raise RuntimeError(f"No files downloaded ! Please try again.")
     download_details = _update_local_db(local_db_file, results)
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
@@ -481,5 +479,6 @@ def download_data(db, num_jobs=2, save_to=None):
 
     # clean up the cache
     CACHE.clear()
+    memory.clear()
 
     return download_details
