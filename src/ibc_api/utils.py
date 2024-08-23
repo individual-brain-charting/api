@@ -411,7 +411,8 @@ def download_data(db, n_jobs=2, save_to=None):
         dataframe with information about files in the dataset, ideally a subset
         of the full dataset
     n_jobs : int, optional
-        number of parallel jobs to run, by default 2
+        number of parallel jobs to run, by default 2. -1 would use all the CPUs. 
+        See: https://joblib.readthedocs.io/en/latest/generated/joblib.Parallel.html
     save_to : str, optional
         where to save the data, by default None, in which case the data is
         saved in a directory called "ibc_data" in the current working directory
