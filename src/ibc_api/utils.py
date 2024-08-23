@@ -410,7 +410,7 @@ def download_data(db, n_jobs=2, save_to=None):
     db : pandas.DataFrame
         dataframe with information about files in the dataset, ideally a subset
         of the full dataset
-    num_jobs : int, optional
+    n_jobs : int, optional
         number of parallel jobs to run, by default 2
     save_to : str, optional
         where to save the data, by default None, in which case the data is
