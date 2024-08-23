@@ -10,4 +10,4 @@ filtered_db = ibc.filter_data(db, subject_list=["08"], task_list=["Lec1"])
 # Download all statistic maps for sub-08, task-Lec1
 # Also creates ibc_data/downloaded_volume_maps.csv
 # which contains local file paths and time of download
-downloaded_db = ibc.download_data(filtered_db, num_jobs=2)
+downloaded_db = ibc.download_data(filtered_db, n_jobs=2)
