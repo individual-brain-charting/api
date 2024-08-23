@@ -7,7 +7,6 @@ import os
 from datetime import datetime
 
 import nibabel
-import numpy as np
 import pandas as pd
 import siibra
 from joblib import Memory, Parallel, delayed
