@@ -460,7 +460,7 @@ def download_data(db, n_jobs=2, save_to=None):
 
     # download finally
     print(f"\n...Starting download of {len(src_file_names)} files...")
-    results = Parallel(n_jobs=num_jobs, backend="threading", verbose=10)(
+    results = Parallel(n_jobs=n_jobs, backend="threading", verbose=10)(
         delayed(_download_and_update_progress)(src_file, dst_file, connector)
         for src_file, dst_file in zip(src_file_names, dst_file_names)
     )
