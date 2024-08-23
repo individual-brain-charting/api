@@ -456,8 +456,7 @@ def download_data(db, num_jobs=2, save_to=None):
             CACHE.run_maintenance()  # keep cache < 2GB
             return file_name, file_time
         except Exception as e:
-            print(f"Error downloading {src_file}. Error: {e}")
-            return None, None
+            raise(f"Error downloading {src_file}. Error: {e}")
 
     # download finally
     print(f"\n...Starting download of {len(src_file_names)} files...")
