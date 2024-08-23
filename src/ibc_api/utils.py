@@ -461,7 +461,7 @@ def download_data(db, num_jobs=2, save_to=None):
             return None, None
 
     # download finally
-    print("...Starting download...")
+    print(f"\n...Starting download of {len(src_file_names)} files...")
     results = Parallel(n_jobs=num_jobs, backend="threading", verbose=10)(
         delayed(_download_and_update_progress)(src_file, dst_file, connector)
         for src_file, dst_file in zip(src_file_names, dst_file_names)
@@ -474,7 +474,7 @@ def download_data(db, num_jobs=2, save_to=None):
     download_details = _update_local_db(local_db_file, results)
     print(
         f"Downloaded requested files from IBC {data_type} dataset. See "
-        f"{local_db_file} for details."
+        f"{local_db_file} for details.\n"
     )
 
     # clean up the cache
