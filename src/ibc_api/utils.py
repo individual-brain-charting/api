@@ -402,7 +402,7 @@ def _download_file(src_file, dst_file, connector):
         return dst_file
 
 
-def download_data(db, num_jobs=2, save_to=None):
+def download_data(db, n_jobs=2, save_to=None):
     """Download the files in a (filtered) dataframe.
 
     Parameters
