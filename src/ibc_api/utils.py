@@ -52,7 +52,7 @@ def _authenticate(token_dir=TOKEN_ROOT):
             # set the token
             siibra.set_ebrains_token(token)
     else:
-        siibra.fetch_ebrains_token()
+        EbrainsRequest.fetch_token()
         token = EbrainsRequest._KG_API_TOKEN
         # save the token
         with open(token_file, "w") as f:
