@@ -44,7 +44,7 @@
             "version": 2,
             "db_file": "preprocessed_v2.csv",
             "id": "44214176-0e8c-48de-8cff-4b6f9593415d",
-            "root": "PreprocessedData_v2.0"
+            "root": ""
         }
     ],
     "raw": [
@@ -58,7 +58,7 @@
             "version": 2,
             "db_file": "raw_v2.csv",
             "id": "a1c940cc-4777-417e-9326-dd6584d6c71f",
-            "root": "v2.0"
+            "root": "sourcedata"
         },
         {
             "version": 3,
@@ -70,13 +70,13 @@
             "version": 4,
             "db_file": "raw_v4.csv",
             "id": "462d8b9c-1c02-442c-9b95-2241f46ee586",
-            "root": "v4.0"
+            "root": ""
         },
         {
             "version": 5,
             "db_file": "raw_v5.csv",
             "id": "d42946b9-cb42-4d1c-a7aa-2d29b11f9f19",
-            "root": "v5.0"
+            "root": ""
         }
     ]
 }
