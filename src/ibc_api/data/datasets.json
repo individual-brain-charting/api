@@ -58,7 +58,7 @@
             "version": 2,
             "db_file": "raw_v2.csv",
             "id": "a1c940cc-4777-417e-9326-dd6584d6c71f",
-            "root": "v2.0/sourcedata"
+            "root": "v2.0"
         },
         {
             "version": 3,
