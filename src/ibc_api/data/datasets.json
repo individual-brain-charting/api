@@ -11,6 +11,12 @@
             "db_file": "volume_maps_v2.csv",
             "id": "ad04f919-7dcc-48d9-864a-d7b62af3d49d",
             "root": "resulting_smooth_maps"
+        },
+        {
+            "version": 3,
+            "db_file": "volume_maps_v3.csv",
+            "id": "131add71-e838-4dab-b953-7b7a69ac5d8f",
+            "root": "resulting_smooth_maps"
         }
     ],
     "surface_maps": [
@@ -18,6 +24,12 @@
             "version": 1,
             "db_file": "surface_maps_v1.csv",
             "id": "ad04f919-7dcc-48d9-864a-d7b62af3d49d",
+            "root": "resulting_smooth_maps_surface"
+        },
+        {
+            "version": 2,
+            "db_file": "surface_maps_v2.csv",
+            "id": "131add71-e838-4dab-b953-7b7a69ac5d8f",
             "root": "resulting_smooth_maps_surface"
         }
     ],
@@ -27,6 +39,12 @@
             "db_file": "preprocessed_v1.csv",
             "id": "3ca4f5a1-647b-4829-8107-588a699763c1",
             "root": "PreprocessedData_v1.0"
+        },
+        {
+            "version": 2,
+            "db_file": "preprocessed_v2.csv",
+            "id": "44214176-0e8c-48de-8cff-4b6f9593415d",
+            "root": "PreprocessedData_v2.0"
         }
     ],
     "raw": [
@@ -47,6 +65,18 @@
             "db_file": "raw_v3.csv",
             "id": "8ddf749f-fb1d-4d16-acc3-fbde91b90e24",
             "root": "v3.0"
+        },
+        {
+            "version": 4,
+            "db_file": "raw_v4.csv",
+            "id": "462d8b9c-1c02-442c-9b95-2241f46ee586",
+            "root": "v4.0"
+        },
+        {
+            "version": 5,
+            "db_file": "raw_v5.csv",
+            "id": "d42946b9-cb42-4d1c-a7aa-2d29b11f9f19",
+            "root": "v5.0"
         }
     ]
 }
