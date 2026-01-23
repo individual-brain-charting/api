@@ -1,5 +1,4 @@
-"""API to fetch IBC data from EBRAINS via Human Data Gateway using siibra. 
-"""
+"""API to fetch IBC data from EBRAINS via Human Data Gateway using siibra."""
 
 # %$
 import json
@@ -165,6 +164,10 @@ def download_gm_mask(resolution=1.5, save_to=None):
     return save_as
 
 
+def _is_empty_db(db):
+    return db is None or db.empty or len(db) == 0
+
+
 def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     """Fetch a csv file describing each file in a given IBC dataset on EBRAINS.
 
@@ -182,14 +185,48 @@ def get_info(data_type="volume_maps", save_to=None, metadata=METADATA):
     pandas.DataFrame
         dataframe with information about each file in the dataset
     """
-    # file with all information about the dataset
-    db_file = md.fetch_dataset_db(data_type, metadata)
-    # load the file as dataframe
-    # convert subject, session and run to string to avoid losing leading zeros
-    db = pd.read_csv(
-        db_file, converters={"subject": str, "session": str, "run": str}
-    )
-    db.drop(columns=["Unnamed: 0"], inplace=True, errors="ignore")
+
+    datasets = metadata[data_type]
+    latest_idx = md._find_latest_version(datasets)
+
+    last_exception = None
+
+    # Try from latest version → older versions
+    for version_idx in range(latest_idx, -1, -1):
+        # fetch the information corresponding to this version
+        dataset = datasets[version_idx]
+        db_file = md.fetch_remote_file(dataset["db_file"])
+        # load the file as dataframe
+        # convert subject, session and run to string to avoid losing
+        # leading zeros
+        db = pd.read_csv(
+            db_file,
+            converters={"subject": str, "session": str, "run": str},
+        )
+        db.drop(columns=["Unnamed: 0"], inplace=True, errors="ignore")
+
+        if not _is_empty_db(db):
+            print(
+                f"Fetched database for {data_type}, version {dataset['version']}."
+            )
+            break
+        else:
+            last_exception = ValueError(
+                f"No versions found for dataset {data_type}, version {dataset['version']}."
+            )
+            print(
+                f"Failed to fetch database for {data_type}, version {dataset['version']}."
+                "Trying older version..."
+            )
+
+    # If all versions failed, raise the last exception
+    if _is_empty_db(db):
+        raise (
+            last_exception
+            if last_exception
+            else ValueError(f"No versions found for dataset {data_type}.")
+        )
+
     # save the database file
     save_to = _create_root_dir(save_to)
     save_as = os.path.join(save_to, f"available_{data_type}.csv")
@@ -411,7 +448,7 @@ def download_data(db, n_jobs=2, save_to=None):
         dataframe with information about files in the dataset, ideally a subset
         of the full dataset
     n_jobs : int, optional
-        number of parallel jobs to run, by default 2. -1 would use all the CPUs. 
+        number of parallel jobs to run, by default 2. -1 would use all the CPUs.
         See: https://joblib.readthedocs.io/en/latest/generated/joblib.Parallel.html
     save_to : str, optional
         where to save the data, by default None, in which case the data is
@@ -457,7 +494,7 @@ def download_data(db, n_jobs=2, save_to=None):
             CACHE.run_maintenance()  # keep cache < 2GB
             return file_name, file_time
         except Exception as e:
-            raise(f"Error downloading {src_file}. Error: {e}")
+            raise (f"Error downloading {src_file}. Error: {e}")
 
     # download finally
     print(f"\n...Starting download of {len(src_file_names)} files...")
