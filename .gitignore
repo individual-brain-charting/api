@@ -4,3 +4,4 @@ src/ibc-api
 ibc_data
 .ipynb_checkpoints
 src/ibc_api/data/token
+src/ibc_api/cache
