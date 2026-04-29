@@ -95,7 +95,7 @@ def _connect_ebrains(data_type="volume_maps", metadata=METADATA, version=None):
     EbrainsRequest.fetch_token()
     # use the token to create a client and get a data bucket
     client = BucketApiClient(token=EbrainsRequest._KG_API_TOKEN)
-    bucket = client.buckets.get_dataset(dataset_id)
+    bucket = client.buckets.get_dataset(dataset_id, request_access=True)
 
     return bucket
 
