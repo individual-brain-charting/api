@@ -1,84 +1,116 @@
 """Script to create the database from the raw, preprocessed, volume maps and surface maps
 data on EBRAINS."""
 
-# import libraries
-import pandas as pd
+import argparse
 import os
+
 import ibc_api.utils as ibc
-from ibc_api.metadata import fetch_metadata, _find_latest_version
+import pandas as pd
 from bids.layout import parse_file_entities
+from ebrains_drive import BucketApiClient
+from ibc_api.metadata import select_dataset
+from siibra.retrieval.requests import EbrainsRequest
+from tqdm import tqdm
 
 datasets = ["raw", "preprocessed", "volume_maps", "surface_maps"]
 
-ibc._authenticate()
-for dataset in datasets:
-    for version in range(1, 6):
-        # Get EBRAINS metadata about the dataset
-        try:
-            ebrains_data = ibc._connect_ebrains(dataset, version=version)
-        except (ValueError, IndexError) as error:
-            print(error)
-            print(f"skipping dataset {dataset}, version {version}")
-            continue
-        try:
-            root_dir = ebrains_data.prefix.strip("/")
-        except AttributeError:
-            root_dir = ""
-        # Get the file names and other info as dataframes
-        ebrains_df = pd.DataFrame(ebrains_data.__dict__["_files"])
-        filenames = ebrains_df["name"].tolist()
-        # parse filenames using pybids to get all the entities
-        bids_entities = []
-        for file in filenames:
-            bids_entity = parse_file_entities(
-                file,
-                include_unmatched=True,
-                config=os.path.join(
-                    os.path.dirname(__file__), "ibc_config.json"
-                ),
+
+def main(dataset_types):
+    """Main function to create the database containing the available data in
+    each Ebrains collection.
+    Parameters
+    ----------
+    dataset_types : list of str
+        list of dataset types to process, could be one or more of
+        'volume_maps', 'surface_maps', 'preprocessed', 'raw'
+    """
+    EbrainsRequest.fetch_token()
+    client = BucketApiClient(token=EbrainsRequest._KG_API_TOKEN)
+
+    for dataset_type in tqdm(dataset_types, desc="Dataset types"):
+        for version in tqdm(
+            range(1, 6), desc=f"{dataset_type} versions", leave=False
+        ):
+            # Get EBRAINS metadata about the dataset
+            try:
+                dataset = select_dataset(dataset_type, version=version)
+            except (ValueError, IndexError) as error:
+                tqdm.write(str(error))
+                tqdm.write(
+                    f"skipping dataset {dataset_type}, version {version}"
+                )
+                continue
+
+            dataset_id = dataset["id"]
+            bucket = client.buckets.get_dataset(
+                dataset_id, request_access=True
             )
-            bids_entities.append(bids_entity)
-        # convert the list of dictionaries with bids entities to a dataframe
-        bids_df = pd.DataFrame(bids_entities)
-        # remove rows with empty path
-        bids_df = bids_df.dropna(how="all")
-        # add a column with the file sizes in MB
-        bids_df["megabytes"] = ebrains_df["bytes"].astype(int).div(1024**2)
-        # add a column with the dataset name
-        bids_df["dataset"] = [dataset] * len(bids_df)
-        infer_root_dir = ebrains_df["name"].str.split("/").str[0].unique()[0]
 
-        if infer_root_dir == root_dir:
-            # add a column with the file path without the root directory
-            path = ebrains_df["name"].str.split("/").str[1:].str.join("/")
-        else:
-            # add a column with the file path
-            path = ebrains_df["name"]
+            if bucket is None:
+                tqdm.write(f"dataset {dataset_id} not found, skipping")
+                continue
 
-        breakpoint()
+            rows = []
+            for item in tqdm(
+                bucket.ls(),
+                desc=f"Files in {dataset_type} v{version}",
+                leave=False,
+            ):
+                # parse filenames using pybids to get all the entities
+                bids_entity = parse_file_entities(
+                    item.name,
+                    include_unmatched=True,
+                    config=os.path.join(
+                        os.path.dirname(__file__), "ibc_config.json"
+                    ),
+                )
+                path = "/".join(item.name.split("/")[1:])
+                root_dir_series = item.name.split("/")[0]
+                row = {
+                    **bids_entity,
+                    "megabytes": item.bytes / (1024**2),
+                    "dataset": dataset_type,
+                    "path": path,
+                    "root_series": root_dir_series,
+                }
+                rows.append(row)
 
-        root_dir_series = ebrains_df["name"].str.split("/").str[0]
-        bids_df["path"] = path
-        # separate surface maps and volume maps in different csv files
-        if dataset == "surface_maps":
-            mask = (
-                root_dir_series == "resulting_smooth_maps_surface"
-            ) & bids_df["extension"].isin([".gii", ".json"])
-            bids_df = bids_df[mask]
-        # there are some files with .gii extension in the volume maps folder
-        # filtering them out
-        elif dataset == "volume_maps":
-            mask = (root_dir_series == "resulting_smooth_maps") & bids_df[
-                "extension"
-            ].isin([".nii.gz", ".json"])
-            bids_df = bids_df[mask]
-        bids_df = bids_df.reset_index(drop=True)
-        # create a csv file with the bids entities
-        csv_file = os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "data",
-            f"{dataset}_v{version}.csv",
-        )
-        bids_df.to_csv(csv_file)
-        print(f"{csv_file} created!")
+            df = pd.DataFrame(rows)
+
+            # separate surface maps and volume maps in different csv files
+            if dataset_type == "surface_maps":
+                mask = (
+                    df["root_series"] == "resulting_smooth_maps_surface"
+                ) & df["extension"].isin([".gii", ".json"])
+                df = df[mask]
+            # there are some files with .gii extension in the volume maps folder
+            # filtering them out
+            elif dataset_type == "volume_maps":
+                mask = (df["root_series"] == "resulting_smooth_maps") & df[
+                    "extension"
+                ].isin([".nii.gz", ".json"])
+                df = df[mask]
+
+            bids_df = df.drop(columns=["root_series"])
+            # create a csv file with the bids entities
+            csv_file = os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "data",
+                f"{dataset_type}_v{version}.csv",
+            )
+            bids_df.to_csv(csv_file)
+            tqdm.write(f"{csv_file} created!")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dataset_type",
+        choices=datasets,
+        nargs="+",  # allows one or more values
+        default=datasets,
+        help="Dataset type(s) to process. Defaults to all.",
+    )
+    args = parser.parse_args()
+    main(args.dataset_type)
