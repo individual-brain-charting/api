@@ -64,7 +64,13 @@ def main(dataset_types):
                         os.path.dirname(__file__), "ibc_config.json"
                     ),
                 )
-                path = "/".join(item.name.split("/")[1:])
+                # Store paths relative to the dataset root (when present).
+                # Some datasets list items directly at bucket root, so only strip when a root is configured.
+                root = (dataset.get("root") or "").strip("/")
+                if root and item.name.startswith(root + "/"):
+                    path = item.name[len(root) + 1 :]
+                else:
+                    path = item.name
                 root_dir_series = item.name.split("/")[0]
                 row = {
                     **bids_entity,
