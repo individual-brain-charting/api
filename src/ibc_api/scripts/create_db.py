@@ -12,7 +12,7 @@ from ibc_api.metadata import select_dataset
 from siibra.retrieval.requests import EbrainsRequest
 from tqdm import tqdm
 
-datasets = ["raw"]
+datasets = ["raw", "preprocessed", "volume_maps", "surface_maps"]
 
 
 def main(dataset_types):
@@ -29,7 +29,7 @@ def main(dataset_types):
 
     for dataset_type in tqdm(dataset_types, desc="Dataset types"):
         for version in tqdm(
-            range(5, 6), desc=f"{dataset_type} versions", leave=False
+            range(1, 6), desc=f"{dataset_type} versions", leave=False
         ):
             # Get EBRAINS metadata about the dataset
             try:
