@@ -408,16 +408,9 @@ def _write_file(src_file, dst_file, data):
             img = nibabel.gifti.gifti.GiftiImage.from_bytes(data)
             nibabel.save(img, dst_file, mode="compat")
         elif src_file.endswith(".csv") or src_file.endswith(".tsv"):
-            # read the data as a dataframe and save it
-            df = pd.read_csv(io.StringIO(data.decode("utf-8")))
-            if dst_file.endswith(".csv"):
-                df.to_csv(dst_file, index=False)
-            elif dst_file.endswith(".tsv"):
-                df.to_csv(dst_file, index=False, sep="\t")
-            else:
-                raise ValueError(
-                    f"File type not supported for {dst_file}. Only .csv and .tsv are supported."
-                )
+            sep = "," if src_file.endswith(".csv") else "\t"
+            df = pd.read_csv(io.StringIO(data.decode("utf-8")), sep=sep)
+            df.to_csv(dst_file, index=False, sep=sep)
         elif src_file.endswith(".json"):
             # read the data as a dictionary and save it
             dict_data = json.loads(data.decode("utf-8"))
