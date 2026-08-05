@@ -12,7 +12,7 @@ from ibc_api.metadata import select_dataset
 from siibra.retrieval.requests import EbrainsRequest
 from tqdm import tqdm
 
-datasets = ["raw", "preprocessed", "volume_maps", "surface_maps"]
+datasets = ["raw"]
 
 
 def main(dataset_types):
@@ -29,7 +29,7 @@ def main(dataset_types):
 
     for dataset_type in tqdm(dataset_types, desc="Dataset types"):
         for version in tqdm(
-            range(1, 6), desc=f"{dataset_type} versions", leave=False
+            range(5, 6), desc=f"{dataset_type} versions", leave=False
         ):
             # Get EBRAINS metadata about the dataset
             try:
@@ -64,7 +64,11 @@ def main(dataset_types):
                         os.path.dirname(__file__), "ibc_config.json"
                     ),
                 )
-                path = "/".join(item.name.split("/")[1:])
+                # no need to remove root for v5 of raw dataset
+                if dataset_type == "raw" and version == 5:
+                    path = item.name
+                else:
+                    path = "/".join(item.name.split("/")[1:])
                 root_dir_series = item.name.split("/")[0]
                 row = {
                     **bids_entity,
