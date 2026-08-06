@@ -419,7 +419,6 @@ def _write_file(src_file, dst_file, data):
         elif src_file.endswith(".bvec") or src_file.endswith(".bval"):
             with open(dst_file, "wb") as f:
                 f.write(data)
-            f.close()
         elif "readme" in os.path.basename(src_file).lower():
             with open(dst_file, "wb") as f:
                 f.write(data)
