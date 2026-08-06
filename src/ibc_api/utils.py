@@ -420,6 +420,9 @@ def _write_file(src_file, dst_file, data):
             with open(dst_file, "wb") as f:
                 f.write(data)
             f.close()
+        elif not os.path.splitext(src_file)[1]:
+            with open(dst_file, "wb") as f:
+                f.write(data)
         else:
             raise ValueError(
                 f"Don't know how to save file {dst_file} of type {type(data)}"
