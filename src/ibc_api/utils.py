@@ -416,10 +416,11 @@ def _write_file(src_file, dst_file, data):
             dict_data = json.loads(data.decode("utf-8"))
             with open(dst_file, "w") as f:
                 json.dump(dict_data, f)
-        elif src_file.endswith(".bvec") or src_file.endswith(".bval"):
-            with open(dst_file, "wb") as f:
-                f.write(data)
-        elif "readme" in os.path.basename(src_file).lower():
+        elif (
+            src_file.endswith(".bvec")
+            or src_file.endswith(".bval")
+            or "readme" in os.path.basename(src_file).lower()
+        ):
             with open(dst_file, "wb") as f:
                 f.write(data)
         else:
