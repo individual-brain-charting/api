@@ -420,7 +420,7 @@ def _write_file(src_file, dst_file, data):
             with open(dst_file, "wb") as f:
                 f.write(data)
             f.close()
-        elif not os.path.splitext(src_file)[1]:
+        elif "readme" in os.path.basename(src_file).lower():
             with open(dst_file, "wb") as f:
                 f.write(data)
         else:
